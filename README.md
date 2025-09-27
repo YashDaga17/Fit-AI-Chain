@@ -74,7 +74,7 @@ Create a `.env.local` file with the following variables:
 GEMINI_API_KEY=your_gemini_api_key_here
 
 # World ID Configuration 
-NEXT_PUBLIC_APP_ID=your_worldcoin_app_id_here
+WORLDCOIN_APP_ID=your_worldcoin_app_id_here
 NEXT_PUBLIC_ACTION=your_action_name
 NEXT_PUBLIC_SIGNAL=your_signal_name
 ```

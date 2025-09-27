@@ -33,9 +33,9 @@ export default function Home() {
   }, [router])
   
   const { status, sessionURI, result, errorCode } = useSession({
-    app_id: process.env.NEXT_PUBLIC_APP_ID as `app_${string}`,
-    action: process.env.NEXT_PUBLIC_ACTION || 'yash-daga',
-    signal: process.env.NEXT_PUBLIC_SIGNAL || 'food-tracking',
+    app_id: process.env.WORLDCOIN_APP_ID as `app_${string}`,
+    action: process.env.WORLDCOIN_ACTION_ID || 'track-your-calorie',
+    signal: process.env.NEXT_PUBLIC_SIGNAL || 'track-your-calorie',
   })
 
   // Redirect to calorie tracker when verification is successful
