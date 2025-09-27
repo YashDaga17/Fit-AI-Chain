@@ -1,22 +1,49 @@
 {
-  "name": "Fit AI Chain",
+  "name": "Fit AI Chain - AI Calorie Tracker",
   "short_name": "Fit AI Chain", 
-  "description": "AI-Powered Calorie Tracking with World ID Verification",
+  "description": "AI-Powered Calorie Tracking with World ID Verification and Gamified Rewards",
   "icons": [
     {
       "src": "/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.svg", 
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
-  "orientation": "portrait-primary"
+  "theme_color": "#f97316",
+  "orientation": "portrait-primary",
+  "categories": ["health", "lifestyle", "fitness"],
+  "lang": "en-US",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Track Food",
+      "short_name": "Track",
+      "description": "Take a photo and track calories",
+      "url": "/tracker",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Leaderboard",
+      "short_name": "Rankings",
+      "description": "View global rankings",
+      "url": "/leaderboard", 
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
