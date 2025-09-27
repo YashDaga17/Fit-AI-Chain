@@ -1,140 +1,345 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
+import { getCategoryBonus } from '@/utils/levelingSystem'
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+// Try different environment variable names for Google API key
+const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ''
+const genAI = new GoogleGenerativeAI(apiKey)
 
-interface FoodAnalysis {
-  food_name: string
-  estimated_weight_grams: number
-  calories_per_100g: number
-  total_calories: number
-  protein: number
-  carbohydrates: number
-  fat: number
-  fiber: number
-  sugar: number
-  sodium: number
-  confidence: number
-  serving_size: string
-  data_source: string
-  analysis_notes: string
+// Rate limiting - simple in-memory store (use Redis in production)
+const requestCounts = new Map<string, { count: number, resetTime: number }>()
+const RATE_LIMIT = 10 // requests per window
+const RATE_WINDOW = 60 * 1000 // 1 minute
+
+function isRateLimited(clientId: string): boolean {
+  const now = Date.now()
+  const clientData = requestCounts.get(clientId)
+  
+  if (!clientData || now > clientData.resetTime) {
+    requestCounts.set(clientId, { count: 1, resetTime: now + RATE_WINDOW })
+    return false
+  }
+  
+  if (clientData.count >= RATE_LIMIT) {
+    return true
+  }
+  
+  clientData.count++
+  return false
 }
 
-export async function POST(req: NextRequest) {
+// Input validation
+function validateImageInput(image: string): boolean {
+  if (!image || typeof image !== 'string') return false
+  if (!image.startsWith('data:image/')) return false
+  if (image.length > 10 * 1024 * 1024) return false // 10MB limit
+  return true
+}
+
+// Helper function for fallback response when AI fails
+function getFailureFallback() {
+  return NextResponse.json({
+    success: true,
+    food: 'Unknown Food Item',
+    calories: 200,
+    description: 'Could not analyze image with AI. Please enter calories manually.',
+    confidence: 'low',
+    cuisine: 'unknown',
+    portionSize: 'estimated serving',
+    ingredients: ['unknown'],
+    cookingMethod: 'unknown',
+    xp: 100,
+    baseXP: 100,
+    bonusMultiplier: 1.0,
+    nutrients: {
+      protein: '10g',
+      carbs: '25g',
+      fat: '8g',
+      fiber: '3g',
+      sugar: '5g'
+    },
+    healthScore: '5',
+    allergens: [],
+    alternatives: 'Upload a clearer image for better analysis'
+  })
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { image, userId, sessionToken } = await req.json()
-    
-    if (!image || !userId || !sessionToken) {
+    // Rate limiting
+    const forwarded = request.headers.get('x-forwarded-for')
+    const clientIP = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
+    if (isRateLimited(clientIP)) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields" },
+        { success: false, error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
+    const body = await request.json()
+    const { image, userId } = body
+
+    // Input validation
+    if (!validateImageInput(image)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid image data provided' },
         { status: 400 }
       )
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    // Validate userId if provided
+    if (userId && (typeof userId !== 'string' || userId.length > 100)) {
       return NextResponse.json(
-        { success: false, message: "Gemini API key not configured" },
+        { success: false, error: 'Invalid userId provided' },
+        { status: 400 }
+      )
+    }
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { success: false, error: 'Google API key not configured' },
         { status: 500 }
       )
     }
 
-    // Convert base64 image to the format expected by Gemini
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+    // Remove data URL prefix
+    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '')
     
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-
-    const prompt = `Analyze this food image and provide a detailed nutritional breakdown. Be as accurate as possible and provide the smallest/most conservative calorie estimate to help users with their fitness goals.
-
-For each food item visible in the image, provide:
-1. Food name and identification
-2. Estimated weight in grams (be conservative/realistic)
-3. Calories per 100g (use standard nutritional databases)
-4. Total calories for the estimated portion
-5. Macronutrients (protein, carbs, fat, fiber, sugar, sodium in grams/mg)
-6. Your confidence level (0-100%)
-7. Data source (where you got the nutritional information)
-8. Any notes about your analysis
-
-Format your response as a JSON object with this exact structure:
-{
-  "foods": [
-    {
-      "food_name": "specific food name",
-      "estimated_weight_grams": number,
-      "calories_per_100g": number,
-      "total_calories": number,
-      "protein": number,
-      "carbohydrates": number,
-      "fat": number,
-      "fiber": number,
-      "sugar": number,
-      "sodium": number,
-      "confidence": number,
-      "serving_size": "description of portion",
-      "data_source": "USDA/nutrition database reference",
-      "analysis_notes": "brief explanation of estimation"
+    // Try different Gemini models in order of preference (updated for latest models)
+    const modelNames = ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro-vision']
+    
+    let model
+    let modelUsed = ''
+    
+    for (const modelName of modelNames) {
+      try {
+        model = genAI.getGenerativeModel({ 
+          model: modelName,
+          generationConfig: {
+            temperature: 0.3, // Lower temperature for more consistent results
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192, // Increased for more detailed responses
+          },
+          safetySettings: [
+            {
+              category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+              threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            },
+            {
+              category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+              threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            },
+          ],
+        })
+        modelUsed = modelName
+        break
+      } catch (modelError) {
+        continue
+      }
     }
-  ],
-  "total_calories": number,
-  "analysis_confidence": number,
-  "general_notes": "overall analysis notes"
+    
+    if (!model) {
+      return NextResponse.json({
+        success: false,
+        error: 'No AI models available for image analysis'
+      }, { status: 500 })
+    }
+
+    const prompt = `You are an advanced AI nutritionist and food recognition expert with access to comprehensive food databases and nutritional information from around the world. Analyze this food image with the following capabilities:
+
+FOOD IDENTIFICATION REQUIREMENTS:
+1. Identify the exact food name, including cultural/regional variations
+2. Recognize ingredients, cooking methods, and preparation styles
+3. Estimate portion size using visual cues (plates, utensils, hands for scale)
+4. Identify food origin/cuisine type when relevant
+5. Detect multiple food items if present in the image
+
+NUTRITIONAL ANALYSIS:
+- Provide accurate calorie estimation based on visible portion
+- Include macronutrients (protein, carbs, fat, fiber)
+- Consider cooking methods that affect calories (fried vs grilled)
+- Account for hidden ingredients (oils, sauces, seasonings)
+
+RESPONSE FORMAT: Return ONLY valid JSON with no additional text:
+{
+  "food": "specific food name with preparation method",
+  "calories": estimated_calories_number,
+  "description": "detailed nutritional and preparation description",
+  "confidence": "high/medium/low",
+  "cuisine": "cuisine type or origin if identifiable",
+  "portionSize": "estimated portion size description",
+  "ingredients": ["main ingredients visible"],
+  "cookingMethod": "preparation method if visible",
+  "nutrients": {
+    "protein": "amount in grams",
+    "carbs": "amount in grams", 
+    "fat": "amount in grams",
+    "fiber": "amount in grams",
+    "sugar": "amount in grams if significant"
+  },
+  "healthScore": "rating from 1-10 based on nutritional value",
+  "allergens": ["potential allergens"],
+  "alternatives": "healthier preparation suggestions if applicable"
 }
 
-Provide conservative estimates to help users stay within their calorie goals. If unsure, estimate lower rather than higher.`
+CALIBRATION EXAMPLES:
+- Small apple (150g): 80 calories
+- Pizza slice (pepperoni, regular): 285 calories
+- Big Mac burger: 563 calories
+- Caesar salad with dressing (300g): 320 calories
+- Banana medium (120g): 105 calories
+- White rice cooked (1 cup): 205 calories
+- Grilled chicken breast (6oz): 350 calories
+- Fried chicken thigh: 250 calories
+- Chocolate chip cookie (medium): 220 calories
+- Avocado toast (2 slices): 380 calories
 
-    const imagePart = {
-      inlineData: {
-        data: base64Data,
-        mimeType: "image/jpeg"
+ACCURACY FOCUS:
+- Be precise with food names (e.g., "Pan-seared salmon fillet" not "fish")
+- Consider regional variations (e.g., "New York style pizza" vs "Neapolitan pizza")
+- Account for visible toppings, sauces, and sides
+- Estimate realistic portions based on visual context`
+
+    // Detect the image format from the original data URL
+    let mimeType = 'image/jpeg'
+    if (image.startsWith('data:image/png')) {
+      mimeType = 'image/png'
+    } else if (image.startsWith('data:image/webp')) {
+      mimeType = 'image/webp'
+    }
+    
+    let result
+    try {
+      result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType,
+          },
+        },
+      ])
+    } catch (geminiError: any) {      
+      // Try with different MIME type as fallback
+      if (mimeType !== 'image/jpeg') {
+        try {
+          result = await model.generateContent([
+            prompt,
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: 'image/jpeg',
+              },
+            },
+          ])
+        } catch (retryError) {
+          return getFailureFallback()
+        }
+      } else {
+        return getFailureFallback()
       }
     }
 
-    const result = await model.generateContent([prompt, imagePart])
-    const response = await result.response
+    if (!result) {
+      return getFailureFallback()
+    }
+
+    const response = result.response
     const text = response.text()
 
-    // Extract JSON from the response
-    let analysisData
+    // Try to extract JSON from the response
+    let foodData
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        analysisData = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found in response')
+      // First try to parse the entire response as JSON
+      foodData = JSON.parse(text.trim())
+      
+      // Validate the required fields
+      if (!foodData.food || typeof foodData.calories !== 'number' || isNaN(foodData.calories)) {
+        throw new Error('Invalid response format')
       }
     } catch (parseError) {
-      console.error('Failed to parse Gemini response:', text)
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: "Failed to analyze image. Please try again with a clearer photo.",
-          debug: text.slice(0, 500)
-        },
-        { status: 500 }
-      )
+      // Try to extract JSON from the response text
+      try {
+        const jsonMatch = text.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+        if (jsonMatch) {
+          foodData = JSON.parse(jsonMatch[0])
+          
+          // Validate the required fields
+          if (!foodData.food || typeof foodData.calories !== 'number' || isNaN(foodData.calories)) {
+            throw new Error('Invalid response format')
+          }
+        } else {
+          throw new Error('No JSON found in response')
+        }
+      } catch (secondParseError) {
+        // Fallback parsing by extracting information manually
+        foodData = {
+          food: 'Unknown Food Item',
+          calories: 250,
+          description: 'Could not analyze the food image properly. Please try again.',
+          confidence: 'low',
+          cuisine: 'unknown',
+          portionSize: 'estimated serving',
+          ingredients: ['unknown'],
+          cookingMethod: 'unknown',
+          nutrients: {
+            protein: '12g',
+            carbs: '30g',
+            fat: '10g',
+            fiber: '4g',
+            sugar: '6g'
+          },
+          healthScore: '5',
+          allergens: [],
+          alternatives: 'Please upload a clearer image for better analysis'
+        }
+      }
     }
 
-    // Validate and format the response
-    if (!analysisData.foods || !Array.isArray(analysisData.foods)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid analysis format received" },
-        { status: 500 }
-      )
-    }
+    // Validate and sanitize the calories value
+    const validCalories = typeof foodData.calories === 'number' && !isNaN(foodData.calories) && foodData.calories > 0 
+      ? foodData.calories 
+      : 200 // fallback to 200 calories if invalid
+
+    // Calculate XP (half of calories + bonuses)
+    let baseXP = Math.floor(validCalories / 2)
+    const categoryBonus = getCategoryBonus(foodData.food)
+    const finalXP = Math.floor(baseXP * categoryBonus)
 
     return NextResponse.json({
       success: true,
-      analysis: analysisData,
-      timestamp: new Date().toISOString()
+      food: foodData.food || 'Unknown Food Item',
+      calories: validCalories,
+      description: foodData.description,
+      confidence: foodData.confidence || 'medium',
+      cuisine: foodData.cuisine || 'unknown',
+      portionSize: foodData.portionSize || 'standard serving',
+      ingredients: foodData.ingredients || [],
+      cookingMethod: foodData.cookingMethod || 'unknown',
+      nutrients: foodData.nutrients || {
+        protein: '8g',
+        carbs: '25g',
+        fat: '12g',
+        fiber: '3g',
+        sugar: '5g'
+      },
+      healthScore: foodData.healthScore || '5',
+      allergens: foodData.allergens || [],
+      alternatives: foodData.alternatives || '',
+      xp: finalXP,
+      baseXP: baseXP,
+      bonusMultiplier: categoryBonus,
+      modelUsed: modelUsed,
+      timestamp: Date.now()
     })
 
   } catch (error) {
-    console.error('Error analyzing food:', error)
     return NextResponse.json(
       { 
         success: false, 
-        message: error instanceof Error ? error.message : "Failed to analyze food image"
+        error: 'Failed to analyze food image',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     )
