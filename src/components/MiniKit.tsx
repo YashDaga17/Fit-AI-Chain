@@ -145,13 +145,21 @@ export function WorldIDVerification() {
         const verificationData = localStorage.getItem('worldid_verification')
         if (verificationData) {
           const parsed = JSON.parse(verificationData)
-          if (parsed && parsed.verified) {
+          
+          const now = Date.now()
+          const verificationAge = now - (parsed.timestamp || 0)
+          const twentyFourHours = 24 * 60 * 60 * 1000
+          
+          if (parsed && parsed.verified && verificationAge < twentyFourHours) {
             setIsVerified(true)
             router.push('/tracker')
+          } else {
+            localStorage.removeItem('worldid_verification')
           }
         }
       } catch (error) {
         console.error('Error checking verification status:', error)
+        localStorage.removeItem('worldid_verification')
       }
     }
   }, [mounted, router])
@@ -341,6 +349,21 @@ export function WorldIDVerification() {
                 <p className="text-xs text-gray-500">
                   Join thousands of users tracking calories with AI
                 </p>
+                
+                {/* Development helper - only show in dev mode */}
+                {process.env.NODE_ENV === 'development' && (
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('worldid_verification')
+                      localStorage.removeItem('user_stats')
+                      localStorage.removeItem('food_entries')
+                      window.location.reload()
+                    }}
+                    className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline"
+                  >
+                    [Dev] Clear All Data
+                  </button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -462,6 +485,21 @@ export function WorldIDVerification() {
                   <p className="text-xs text-gray-500">
                     Secure • Private • Human-verified community
                   </p>
+                  
+                  {/* Development helper - only show in dev mode */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('worldid_verification')
+                        localStorage.removeItem('user_stats')
+                        localStorage.removeItem('food_entries')
+                        window.location.reload()
+                      }}
+                      className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline"
+                    >
+                      [Dev] Clear All Data
+                    </button>
+                  )}
                 </div>
               </>
             )}

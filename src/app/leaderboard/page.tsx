@@ -36,20 +36,27 @@ export default function LeaderboardPage() {
   const generateMockLeaderboard = () => {
     const userStats = JSON.parse(localStorage.getItem('user_stats') || '{"totalXP": 0, "level": 1, "streak": 1, "totalCalories": 0}')
     
+    const safeUserStats = {
+      totalXP: Number(userStats.totalXP) || 0,
+      level: Number(userStats.level) || 1,
+      streak: Number(userStats.streak) || 1,
+      totalCalories: Number(userStats.totalCalories) || 0
+    }
+    
     const mockData: LeaderboardEntry[] = [
       { rank: 1, name: 'FoodMaster99', totalXP: 2840, level: 28, streak: 45, totalCalories: 28400, avatar: '🍕' },
       { rank: 2, name: 'HealthyEater', totalXP: 2650, level: 26, streak: 38, totalCalories: 26500, avatar: '🥗' },
       { rank: 3, name: 'CalorieKing', totalXP: 2380, level: 23, streak: 32, totalCalories: 23800, avatar: '👑' },
       { rank: 4, name: 'FitnessFan', totalXP: 2120, level: 21, streak: 28, totalCalories: 21200, avatar: '💪' },
       { rank: 5, name: 'NutritionNinja', totalXP: 1980, level: 19, streak: 24, totalCalories: 19800, avatar: '🥷' },
-      { rank: 6, name: 'You', totalXP: userStats.totalXP, level: userStats.level, streak: userStats.streak, totalCalories: userStats.totalCalories, avatar: '🎯' },
+      { rank: 6, name: 'You', totalXP: safeUserStats.totalXP, level: safeUserStats.level, streak: safeUserStats.streak, totalCalories: safeUserStats.totalCalories, avatar: '🎯' },
       { rank: 7, name: 'WellnessWarrior', totalXP: 1650, level: 16, streak: 18, totalCalories: 16500, avatar: '⚔️' },
       { rank: 8, name: 'SnapAndTrack', totalXP: 1420, level: 14, streak: 15, totalCalories: 14200, avatar: '📸' },
       { rank: 9, name: 'BalancedLife', totalXP: 1180, level: 11, streak: 12, totalCalories: 11800, avatar: '⚖️' },
       { rank: 10, name: 'HealthHunter', totalXP: 980, level: 9, streak: 8, totalCalories: 9800, avatar: '🎯' },
     ]
 
-    const sorted = mockData.sort((a, b) => b.totalXP - a.totalXP)
+    const sorted = mockData.sort((a, b) => (b.totalXP || 0) - (a.totalXP || 0))
     sorted.forEach((entry, index) => {
       entry.rank = index + 1
       if (entry.name === 'You') {
@@ -177,8 +184,8 @@ export default function LeaderboardPage() {
                       </div>
                     ) : entry.name}
                   </div>
-                  <div className="text-white/80 text-xs">{entry.totalXP.toLocaleString()} XP</div>
-                  <div className="text-white/60 text-xs">Lv.{entry.level}</div>
+                  <div className="text-white/80 text-xs">{(entry.totalXP || 0).toLocaleString()} XP</div>
+                  <div className="text-white/60 text-xs">Lv.{entry.level || 1}</div>
                 </div>
               ))}
             </div>
@@ -230,11 +237,11 @@ export default function LeaderboardPage() {
                       <div className={`text-sm flex items-center space-x-2 ${
                         entry.name === 'You' ? 'text-white/80' : 'text-gray-600'
                       }`}>
-                        <span>Level {entry.level}</span>
+                        <span>Level {entry.level || 1}</span>
                         <span>•</span>
                         <span className="flex items-center">
                           <Flame className="w-3 h-3 mr-1" />
-                          {entry.streak} streak
+                          {entry.streak || 0} streak
                         </span>
                       </div>
                     </div>
@@ -243,7 +250,7 @@ export default function LeaderboardPage() {
                   {/* Stats */}
                   <div className="text-right">
                     <div className={`font-bold ${entry.name === 'You' ? 'text-white' : 'text-gray-900'}`}>
-                      {entry.totalXP.toLocaleString()}
+                      {(entry.totalXP || 0).toLocaleString()}
                     </div>
                     <div className={`text-xs uppercase tracking-wide ${
                       entry.name === 'You' ? 'text-white/70' : 'text-gray-500'
