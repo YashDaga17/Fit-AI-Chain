@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'api.qrserver.com'],
   },
   // Only expose necessary environment variables to client
   env: {
@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'X-Frame-Options',
-            value: 'DENY'
+            value: 'SAMEORIGIN' // Changed from DENY to allow World App embedding
           },
           {
             key: 'X-XSS-Protection',
@@ -32,7 +32,22 @@ const nextConfig: NextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
-          }
+          },
+          // Add CSP header for production security
+          ...(process.env.NODE_ENV === 'production' ? [{
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // MiniKit requires unsafe-eval
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https: blob:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://api.qrserver.com https://developer.worldcoin.org",
+              "frame-ancestors 'self' https://worldapp.org https://*.worldapp.org", // Allow World App frames
+              "object-src 'none'",
+              "base-uri 'self'"
+            ].join('; ')
+          }] : [])
         ]
       },
       {
@@ -41,11 +56,36 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'no-store, max-age=0'
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.NODE_ENV === 'development' ? '*' : 'https://worldapp.org'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'POST, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, User-Agent'
           }
         ]
       }
     ]
-  }
+  },
+  // Optimize for production
+  poweredByHeader: false,
+  compress: true,
+  // Handle World App specific routing
+  async rewrites() {
+    return [
+      // Allow World App to access the app
+      {
+        source: '/worldapp/:path*',
+        destination: '/:path*',
+      },
+    ]
+  },
 };
 
 export default nextConfig;

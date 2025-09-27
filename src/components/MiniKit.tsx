@@ -18,6 +18,7 @@ import {
   Lock,
   Home
 } from 'lucide-react'
+import { logEnvironmentStatus } from '@/utils/environmentValidation'
 
 interface MiniKitProviderProps {
   children: React.ReactNode
@@ -84,6 +85,10 @@ export function MiniKitProvider({ children }: MiniKitProviderProps) {
   useEffect(() => {
     const initMiniKit = async () => {
       try {
+        // Log environment status for debugging (but don't throw on validation errors)
+        const validation = logEnvironmentStatus()
+        
+        // Only throw for critical missing app ID
         if (!process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID) {
           throw new Error('NEXT_PUBLIC_WORLDCOIN_APP_ID is not configured')
         }
@@ -96,6 +101,7 @@ export function MiniKitProvider({ children }: MiniKitProviderProps) {
         
         setIsInitialized(true)
       } catch (err) {
+        console.error('MiniKit initialization error:', err)
         setError(err instanceof Error ? err.message : 'Failed to initialize MiniKit')
         setIsInitialized(true) // Continue without MiniKit
       }
@@ -169,8 +175,24 @@ export function WorldIDVerification() {
     setVerificationError(null)
 
     try {
+      console.log('Starting verification process...')
+      
+      // Enhanced environment check
+      const envCheck = {
+        NODE_ENV: process.env.NODE_ENV,
+        hasAppId: !!process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID,
+        hasAction: !!process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
+        appIdFormat: process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID?.substring(0, 10) + '...',
+        action: process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
+        signal: process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL || 'empty',
+        isWorldApp,
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent.substring(0, 50) + '...' : 'N/A'
+      }
+      console.log('Environment check:', envCheck)
+      
       // Check if MiniKit is available
       const miniKitInstalled = await SafeMiniKit.isInstalled()
+      console.log('MiniKit availability:', { miniKitInstalled, isWorldApp })
       
       if (!miniKitInstalled) {
         throw new Error('MiniKit is not available. Please make sure you are using World App.')
@@ -185,50 +207,110 @@ export function WorldIDVerification() {
         verification_level: VerificationLevel.Device,
       }
 
+      console.log('Verification payload:', {
+        action: verifyPayload.action,
+        signal: verifyPayload.signal ? 'present' : 'empty',
+        verification_level: 'Device'
+      })
+
       let response
       try {
         response = await SafeMiniKit.verify(verifyPayload)
+        console.log('MiniKit verification response:', {
+          success: response?.success,
+          hasNullifierHash: !!response?.nullifier_hash,
+          hasProof: !!response?.proof,
+          errorMessage: response?.error_message,
+          responseType: typeof response,
+          responseKeys: response ? Object.keys(response) : []
+        })
       } catch (miniKitError) {
-        throw new Error('Verification failed. Please try again.')
+        console.error('MiniKit verification error:', miniKitError)
+        throw new Error(`MiniKit verification failed: ${miniKitError instanceof Error ? miniKitError.message : 'Unknown error'}`)
       }
 
-      if (response && response.success) {
-        // Verify with backend
-        const verifyResponse = await fetch('/api/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            payload: response,
-            action: verifyPayload.action,
-            signal: verifyPayload.signal,
-          }),
+      if (!response) {
+        throw new Error('No response from MiniKit verification')
+      }
+
+      if (!response.success) {
+        throw new Error(response.error_message || 'MiniKit verification was not successful')
+      }
+
+      // If we get here, verification was successful
+      console.log('MiniKit verification successful, verifying with backend...')
+      
+      const backendPayload = {
+        payload: response,
+        action: verifyPayload.action,
+        signal: verifyPayload.signal,
+      }
+      
+      console.log('Sending to backend:', {
+        hasPayload: !!backendPayload.payload,
+        payloadType: typeof backendPayload.payload,
+        payloadKeys: backendPayload.payload ? Object.keys(backendPayload.payload) : [],
+        action: backendPayload.action,
+        signal: backendPayload.signal,
+        nullifierHash: backendPayload.payload?.nullifier_hash ? 'present' : 'missing'
+      })
+      
+      // Verify with backend
+      const verifyResponse = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'User-Agent': typeof window !== 'undefined' ? window.navigator.userAgent : ''
+        },
+        body: JSON.stringify(backendPayload),
+      })
+
+      const responseText = await verifyResponse.text()
+      console.log('Backend response status:', verifyResponse.status)
+      console.log('Backend response headers:', Object.fromEntries(verifyResponse.headers.entries()))
+      
+      let verifyData
+      try {
+        verifyData = JSON.parse(responseText)
+        console.log('Backend verification result:', {
+          verified: verifyData.verified,
+          status: verifyData.status,
+          hasError: !!verifyData.error,
+          errorMessage: verifyData.error,
+          hasVerifyRes: !!verifyData.verifyRes
         })
+      } catch (parseError) {
+        console.error('Failed to parse backend response:', responseText)
+        throw new Error('Invalid response from verification server')
+      }
 
-        if (!verifyResponse.ok) {
-          throw new Error('Backend verification failed')
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.error || `Verification failed with status ${verifyResponse.status}`)
+      }
+      
+      if (verifyData.verified) {
+        // Store verification
+        const verificationData = {
+          verified: true,
+          timestamp: Date.now(),
+          action: verifyPayload.action,
         }
-
-        const verifyData = await verifyResponse.json()
         
-        if (verifyData.verified) {
-          // Store verification
-          const verificationData = {
-            verified: true,
-            timestamp: Date.now(),
-            action: verifyPayload.action,
-          }
-          
-          localStorage.setItem('worldid_verification', JSON.stringify(verificationData))
-          setIsVerified(true)
-          router.push('/tracker')
-        } else {
-          throw new Error('Verification was not successful')
-        }
+        localStorage.setItem('worldid_verification', JSON.stringify(verificationData))
+        console.log('Verification completed successfully')
+        setIsVerified(true)
+        router.push('/tracker')
       } else {
-        throw new Error(response?.error_message || 'Verification failed')
+        throw new Error(verifyData.error || 'Verification was not successful')
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Verification failed'
+      console.error('Verification process error:', {
+        error: errorMessage,
+        type: typeof error,
+        isWorldApp,
+        timestamp: new Date().toISOString()
+      })
       setVerificationError(errorMessage)
     } finally {
       setIsVerifying(false)
