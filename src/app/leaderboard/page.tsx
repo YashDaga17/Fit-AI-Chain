@@ -24,21 +24,18 @@ export default function LeaderboardPage() {
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'alltime'>('weekly')
 
   useEffect(() => {
-    // Check if user is verified
     const verificationData = localStorage.getItem('worldid_verification')
     if (!verificationData) {
       router.push('/')
       return
     }
 
-    // Generate mock leaderboard data (in a real app, this would come from your backend)
     generateMockLeaderboard()
   }, [router, timeframe])
 
   const generateMockLeaderboard = () => {
     const userStats = JSON.parse(localStorage.getItem('user_stats') || '{"totalXP": 0, "level": 1, "streak": 1, "totalCalories": 0}')
     
-    // Mock data for demonstration
     const mockData: LeaderboardEntry[] = [
       { rank: 1, name: 'FoodMaster99', totalXP: 2840, level: 28, streak: 45, totalCalories: 28400, avatar: '🍕' },
       { rank: 2, name: 'HealthyEater', totalXP: 2650, level: 26, streak: 38, totalCalories: 26500, avatar: '🥗' },
@@ -52,7 +49,6 @@ export default function LeaderboardPage() {
       { rank: 10, name: 'HealthHunter', totalXP: 980, level: 9, streak: 8, totalCalories: 9800, avatar: '🎯' },
     ]
 
-    // Sort by XP and update ranks
     const sorted = mockData.sort((a, b) => b.totalXP - a.totalXP)
     sorted.forEach((entry, index) => {
       entry.rank = index + 1

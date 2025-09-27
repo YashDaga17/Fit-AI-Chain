@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
       )
     }
     
-    // In production, verify the session token against the database
     const logs = userFoodLogs.get(userId) || []
     
     return NextResponse.json({
@@ -31,7 +30,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Add a new food log
 export async function POST(req: NextRequest) {
   try {
     const { userId, sessionToken, foodLog } = await req.json()
@@ -43,7 +41,6 @@ export async function POST(req: NextRequest) {
       )
     }
     
-    // In production, verify the session token and userId
     
     const existingLogs = userFoodLogs.get(userId) || []
     const newLog = {
@@ -69,7 +66,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE - Remove a food log
 export async function DELETE(req: NextRequest) {
   try {
     const { userId, sessionToken, logId } = await req.json()

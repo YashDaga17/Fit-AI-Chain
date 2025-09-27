@@ -39,7 +39,6 @@ export function middleware(request: NextRequest) {
 // Specify which paths this middleware should run on
 export const config = {
   matcher: [
-    // Run on all paths except static files
     '/((?!_next/static|_next/image|favicon.ico|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

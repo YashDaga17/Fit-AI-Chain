@@ -44,7 +44,6 @@ function validateVerificationPayload(data: any): data is IRequestPayload {
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const forwarded = request.headers.get('x-forwarded-for')
     const clientIP = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
     
@@ -57,7 +56,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
-    // Input validation
     if (!validateVerificationPayload(body)) {
       return NextResponse.json(
         { error: 'Invalid verification payload', status: 400 },
@@ -79,8 +77,6 @@ export async function POST(request: NextRequest) {
     const verifyRes = (await verifyCloudProof(payload, app_id, action, signal)) as IVerifyResponse
 
     if (verifyRes.success) {
-      // This is where you should perform backend actions if the verification succeeds
-      // Such as, setting a user as "verified" in a database
       
       return NextResponse.json({ 
         verifyRes, 
@@ -89,8 +85,6 @@ export async function POST(request: NextRequest) {
         message: 'Verification successful'
       })
     } else {
-      // This is where you should handle errors from the World ID /verify endpoint.
-      // Usually these errors are due to a user having already verified.
       console.error('Verification failed:', verifyRes)
       
       return NextResponse.json({ 

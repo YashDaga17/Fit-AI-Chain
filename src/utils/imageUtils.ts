@@ -66,24 +66,15 @@ export const dataURLToBlob = (dataURL: string): Blob => {
   return new Blob([u8arr], { type: mime })
 }
 
-/**
- * Get the MIME type from a data URL
- */
 export const getMimeTypeFromDataURL = (dataURL: string): string => {
   const match = dataURL.match(/data:([^;]+);/)
   return match ? match[1] : 'image/jpeg'
 }
 
-/**
- * Check if the browser supports camera access
- */
 export const checkCameraSupport = (): boolean => {
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
 }
 
-/**
- * Format file size for display
- */
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes'
   
@@ -94,18 +85,13 @@ export const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-/**
- * Validate image file type
- */
+
 export const isValidImageType = (file: File): boolean => {
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
   return validTypes.includes(file.type)
 }
 
-/**
- * Generate a unique filename
- */
-export const generateImageFilename = (prefix: string = 'food'): string => {
+export const generateImageFilename = (prefix: string = 'food'): any => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
   const random = Math.random().toString(36).substring(2, 8)
   return `${prefix}-${timestamp}-${random}.jpg`

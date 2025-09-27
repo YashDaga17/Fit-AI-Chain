@@ -136,7 +136,6 @@ export class MiniKitUtils {
     }
   }
 
-  // Sign Message
   public async signMessage(message: string): Promise<void> {
     if (!MiniKit.isInstalled()) {
       throw new Error('MiniKit is not installed. Please open this app in World App.')
@@ -151,7 +150,6 @@ export class MiniKitUtils {
     }
   }
 
-  // Sign Typed Data (EIP-712)
   public async signTypedData(typedData: any): Promise<void> {
     if (!MiniKit.isInstalled()) {
       throw new Error('MiniKit is not installed. Please open this app in World App.')
@@ -240,11 +238,9 @@ export class MiniKitUtils {
       throw new Error('MiniKit is not installed. Please open this app in World App.')
     }
 
-    // Return available permissions
     return ['verify', 'payment', 'walletAuth', 'signMessage', 'sendTransaction']
   }
 
-  // Check if MiniKit is available
   public isAvailable(): boolean {
     return MiniKit.isInstalled()
   }

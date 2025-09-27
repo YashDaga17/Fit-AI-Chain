@@ -1,5 +1,3 @@
-// Food tracking and calorie counting level system
-
 export interface UserLevel {
   level: number
   title: string
@@ -93,7 +91,6 @@ export const FOOD_TRACKING_LEVELS: UserLevel[] = [
 ]
 
 export function getUserLevel(totalXP: number): UserLevel {
-  // Ensure totalXP is a valid number
   const validXP = Number(totalXP) || 0
   
   for (const level of FOOD_TRACKING_LEVELS) {
@@ -101,7 +98,6 @@ export function getUserLevel(totalXP: number): UserLevel {
       return level
     }
   }
-  // Default to highest level if XP exceeds all levels
   return FOOD_TRACKING_LEVELS[FOOD_TRACKING_LEVELS.length - 1]
 }
 

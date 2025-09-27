@@ -216,7 +216,6 @@ export default function TrackerPage() {
   }
   const achievements = mounted ? getAchievements(userStats.totalXP || 0, userStats.streak || 1, foodEntries.length) : []
 
-  // Don't render dynamic content until mounted to prevent hydration issues
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">

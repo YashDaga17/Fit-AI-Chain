@@ -297,12 +297,10 @@ ACCURACY FOCUS:
       }
     }
 
-    // Validate and sanitize the calories value
     const validCalories = typeof foodData.calories === 'number' && !isNaN(foodData.calories) && foodData.calories > 0 
       ? foodData.calories 
-      : 200 // fallback to 200 calories if invalid
+      : 0
 
-    // Calculate XP (half of calories + bonuses)
     let baseXP = Math.floor(validCalories / 2)
     const categoryBonus = getCategoryBonus(foodData.food)
     const finalXP = Math.floor(baseXP * categoryBonus)
