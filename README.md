@@ -258,18 +258,30 @@ ngrok http 3000
 - **Error handling**: Graceful degradation with fallback responses
 - **CORS configuration**: Proper cross-origin resource sharing
 
-## � Troubleshooting
+## 🔍 Troubleshooting
 
 ### Common Issues
+
+**World ID verification fails on Vercel but works with ngrok:**
+- Check that your Vercel domain is added to World Developer Portal
+- Ensure environment variables are properly set in Vercel dashboard
+- Verify CORS headers are properly configured for `worldapp.org` origin
+- Make sure `APP_ID` matches `NEXT_PUBLIC_WLD_APP_ID` in production
 
 **World ID verification fails:**
 - Check network connection and try again
 - Ensure World App is updated to latest version
 - Verify app configuration in World Developer Portal
+- Check browser console for CORS or network errors
+
+**Font loading errors (404 on fonts):**
+- This is a known issue with Geist fonts on Vercel
+- The app uses Inter font as fallback which loads properly
+- Font errors don't affect functionality
 
 **AI analysis not working:**
-- Confirm `GEMINI_API_KEY` is set correctly
-- Check API key permissions and usage limits
+- Confirm `GEMINI_API_KEY` is set correctly in Vercel dashboard
+- Check API key permissions and usage limits in Google AI Studio
 - Take clearer photos with better lighting
 
 **Mobile camera not working:**
@@ -277,7 +289,29 @@ ngrok http 3000
 - Use HTTPS (required for camera access)
 - Try different browsers if issues persist
 
+### Environment Variables Checklist for Vercel
+
+Make sure these are set in your Vercel project dashboard:
+```
+GEMINI_API_KEY=your_gemini_key_here
+NEXT_PUBLIC_WLD_APP_ID=app_staging_xxx (or app_prod_xxx for production)
+NEXT_PUBLIC_WLD_ACTION=track-calories (or your custom action)
+WLD_CLIENT_ID=your_client_id
+WLD_CLIENT_SECRET=your_client_secret
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+```
+
 ### Debug Mode
+Add `?debug=true` to any URL to see debug information and environment status.
+
+### Vercel-Specific Fixes
+
+If you're experiencing issues on Vercel that don't happen locally:
+
+1. **Check build logs** in Vercel dashboard for any environment variable warnings
+2. **Redeploy** after setting environment variables
+3. **Test API endpoints** directly: `https://your-app.vercel.app/api/verify`
+4. **Check World Developer Portal** settings match your Vercel domain
 Add `?debug=true` to any URL to see debug information and environment status.
 
 ## 🤝 Contributing

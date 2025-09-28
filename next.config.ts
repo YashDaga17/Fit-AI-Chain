@@ -6,9 +6,9 @@ const nextConfig: NextConfig = {
   },
   // Only expose necessary environment variables to client
   env: {
-    NEXT_PUBLIC_WORLDCOIN_APP_ID: process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID,
-    NEXT_PUBLIC_WORLDCOIN_ACTION: process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
-    NEXT_PUBLIC_WORLDCOIN_SIGNAL: process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL,
+    NEXT_PUBLIC_WLD_APP_ID: process.env.NEXT_PUBLIC_WLD_APP_ID || process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID,
+    NEXT_PUBLIC_WLD_ACTION: process.env.NEXT_PUBLIC_WLD_ACTION || process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
+    NEXT_PUBLIC_WLD_SIGNAL: process.env.NEXT_PUBLIC_WLD_SIGNAL || process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL,
     // Don't expose API keys to client - keep them server-side only
   },
   // Add security headers
@@ -38,12 +38,13 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // MiniKit requires unsafe-eval
-              "style-src 'self' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://worldapp.org https://*.worldapp.org", // MiniKit requires unsafe-eval
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob:",
-              "font-src 'self' data:",
-              "connect-src 'self' https://api.qrserver.com https://developer.worldcoin.org",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "connect-src 'self' https://api.qrserver.com https://developer.worldcoin.org https://worldapp.org https://*.worldapp.org wss://worldapp.org",
               "frame-ancestors 'self' https://worldapp.org https://*.worldapp.org", // Allow World App frames
+              "frame-src 'self' https://worldapp.org https://*.worldapp.org",
               "object-src 'none'",
               "base-uri 'self'"
             ].join('; ')
@@ -59,15 +60,21 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.NODE_ENV === 'development' ? '*' : 'https://worldapp.org'
+            value: process.env.NODE_ENV === 'development' 
+              ? '*' 
+              : 'https://worldapp.org, https://fit-ai-chain.vercel.app'
           },
           {
             key: 'Access-Control-Allow-Methods',
-            value: 'POST, OPTIONS'
+            value: 'GET, POST, PUT, DELETE, OPTIONS'
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization, User-Agent'
+            value: 'Content-Type, Authorization, User-Agent, X-Requested-With'
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true'
           }
         ]
       }

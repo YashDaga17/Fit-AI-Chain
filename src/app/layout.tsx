@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: 'swap',
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -96,15 +92,17 @@ export default function RootLayout({
         
         {/* Preload critical fonts */}
         <link
-          rel="preload"
-          href="/fonts/geist-sans.woff2"
-          as="font"
-          type="font/woff2"
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+        />
+        <link
+          rel="preconnect" 
+          href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen text-rendering`}
+        className={`${inter.variable} font-sans antialiased min-h-screen`}
         suppressHydrationWarning
       >
         <div className="min-h-screen safe-top safe-bottom">

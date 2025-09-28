@@ -13,27 +13,25 @@ export function validateEnvironmentVariables(): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
 
-  // Critical variables
-  const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID
+  // Critical variables - check both possible naming conventions
+  const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || process.env.NEXT_PUBLIC_WLD_APP_ID
   if (!appId) {
-    errors.push('NEXT_PUBLIC_WORLDCOIN_APP_ID is required')
+    errors.push('NEXT_PUBLIC_WORLDCOIN_APP_ID or NEXT_PUBLIC_WLD_APP_ID is required')
   } else if (!appId.startsWith('app_')) {
-    errors.push('NEXT_PUBLIC_WORLDCOIN_APP_ID must start with "app_"')
+    errors.push('World App ID must start with "app_"')
   }
 
   // Backend app ID should match frontend - but only check on server side
   if (typeof window === 'undefined') {
     // Server-side validation
-    const backendAppId = process.env.APP_ID
-    if (!backendAppId) {
-      errors.push('APP_ID is required for backend verification')
-    } else if (backendAppId !== appId) {
-      errors.push('APP_ID and NEXT_PUBLIC_WORLDCOIN_APP_ID must match')
+    const backendAppId = process.env.APP_ID || process.env.WLD_CLIENT_ID
+    if (!backendAppId && process.env.NODE_ENV === 'production') {
+      warnings.push('No backend app ID configured - World ID verification may not work')
     }
   }
 
   // Action is required for World ID
-  const action = process.env.NEXT_PUBLIC_WORLDCOIN_ACTION
+  const action = process.env.NEXT_PUBLIC_WORLDCOIN_ACTION || process.env.NEXT_PUBLIC_WLD_ACTION
   if (!action) {
     warnings.push('NEXT_PUBLIC_WORLDCOIN_ACTION not set - using default "verify"')
   }

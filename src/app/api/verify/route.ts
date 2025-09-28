@@ -7,6 +7,29 @@ interface IRequestPayload {
   signal: string | undefined
 }
 
+// CORS helper function
+function createCorsResponse(data: any, status: number = 200, request: NextRequest) {
+  const origin = request.headers.get('origin')
+  const allowedOrigins = [
+    'https://worldapp.org',
+    'https://fit-ai-chain.vercel.app',
+    ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : [])
+  ]
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (origin && allowedOrigins.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin
+    headers['Access-Control-Allow-Credentials'] = 'true'
+  } else if (process.env.NODE_ENV === 'development') {
+    headers['Access-Control-Allow-Origin'] = '*'
+  }
+
+  return NextResponse.json(data, { status, headers })
+}
+
 // Rate limiting for verification attempts
 const verifyAttempts = new Map<string, { count: number, resetTime: number }>()
 const VERIFY_RATE_LIMIT = 5 // attempts per window
@@ -47,6 +70,14 @@ function isTestRequest(data: any): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  // Handle CORS preflight for World App
+  const origin = request.headers.get('origin')
+  const allowedOrigins = [
+    'https://worldapp.org',
+    'https://fit-ai-chain.vercel.app',
+    ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : [])
+  ]
+  
   try {
     const forwarded = request.headers.get('x-forwarded-for')
     const clientIP = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
@@ -62,9 +93,10 @@ export async function POST(request: NextRequest) {
     
     if (isVerifyRateLimited(clientIP)) {
       console.log('Rate limited IP:', clientIP)
-      return NextResponse.json(
+      return createCorsResponse(
         { error: 'Too many verification attempts. Please wait before trying again.', status: 429 },
-        { status: 429 }
+        429,
+        request
       )
     }
 
@@ -80,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Handle test requests (for debugging/health checks)
     if (isTestRequest(body)) {
       console.log('Test request received')
-      return NextResponse.json(
+      return createCorsResponse(
         { 
           error: 'Invalid verification payload - test request detected', 
           status: 400,
@@ -91,13 +123,14 @@ export async function POST(request: NextRequest) {
             signal: 'string (optional)'
           }
         },
-        { status: 400 }
+        400,
+        request
       )
     }
     
     if (!validateVerificationPayload(body)) {
       console.error('Invalid verification payload structure:', body)
-      return NextResponse.json(
+      return createCorsResponse(
         { 
           error: 'Invalid verification payload', 
           status: 400,
@@ -107,7 +140,8 @@ export async function POST(request: NextRequest) {
             signal: 'string (optional)'
           }
         },
-        { status: 400 }
+        400,
+        request
       )
     }
 
@@ -116,18 +150,20 @@ export async function POST(request: NextRequest) {
     
     if (!app_id) {
       console.error('App ID not configured - check environment variables')
-      return NextResponse.json(
+      return createCorsResponse(
         { error: 'App ID not configured', status: 500 },
-        { status: 500 }
+        500,
+        request
       )
     }
 
     // Validate app_id format
     if (!app_id.startsWith('app_')) {
       console.error('Invalid app_id format:', app_id.substring(0, 10) + '...')
-      return NextResponse.json(
+      return createCorsResponse(
         { error: 'Invalid app ID format', status: 500 },
-        { status: 500 }
+        500,
+        request
       )
     }
 
@@ -144,12 +180,12 @@ export async function POST(request: NextRequest) {
     if (verifyRes.success) {
       console.log('Verification successful for nullifier:', payload.nullifier_hash?.substring(0, 10) + '...')
       
-      return NextResponse.json({ 
+      return createCorsResponse({ 
         verifyRes, 
         status: 200,
         verified: true,
         message: 'Verification successful'
-      })
+      }, 200, request)
     } else {
       console.error('Verification failed:', {
         success: verifyRes.success,
@@ -158,12 +194,12 @@ export async function POST(request: NextRequest) {
         attribute: verifyRes.attribute
       })
       
-      return NextResponse.json({ 
+      return createCorsResponse({ 
         verifyRes, 
         status: 400,
         verified: false,
         error: verifyRes.detail || 'Verification failed - user may have already verified'
-      })
+      }, 400, request)
     }
   } catch (error) {
     console.error('Verification error details:', {
@@ -172,14 +208,43 @@ export async function POST(request: NextRequest) {
       type: typeof error,
       NODE_ENV: process.env.NODE_ENV
     })
-    return NextResponse.json(
+    return createCorsResponse(
       { 
         error: 'Internal server error during verification', 
         status: 500,
         verified: false,
         details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
       },
-      { status: 500 }
+      500,
+      request
     )
   }
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin')
+  const allowedOrigins = [
+    'https://worldapp.org',
+    'https://fit-ai-chain.vercel.app',
+    ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : [])
+  ]
+
+  const corsHeaders: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, User-Agent, X-Requested-With',
+    'Access-Control-Max-Age': '86400', // 24 hours
+  }
+
+  if (origin && allowedOrigins.includes(origin)) {
+    corsHeaders['Access-Control-Allow-Origin'] = origin
+    corsHeaders['Access-Control-Allow-Credentials'] = 'true'
+  } else if (process.env.NODE_ENV === 'development') {
+    corsHeaders['Access-Control-Allow-Origin'] = '*'
+  }
+
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  })
 }

@@ -88,15 +88,18 @@ export function MiniKitProvider({ children }: MiniKitProviderProps) {
         // Log environment status for debugging (but don't throw on validation errors)
         const validation = logEnvironmentStatus()
         
-        // Only throw for critical missing app ID
-        if (!process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID) {
-          throw new Error('NEXT_PUBLIC_WORLDCOIN_APP_ID is not configured')
+        // Check for app ID with multiple possible environment variable names
+        const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || process.env.NEXT_PUBLIC_WLD_APP_ID
+        if (!appId) {
+          console.warn('World ID app ID not configured - World App features will be limited')
+          setIsInitialized(true) // Still allow app to work without World ID
+          return
         }
 
         // Only initialize MiniKit if we're in World App
         const isWorldApp = typeof window !== 'undefined' && window.navigator.userAgent.includes('worldapp')
         if (isWorldApp) {
-          await SafeMiniKit.install(process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID as `app_${string}`)
+          await SafeMiniKit.install(appId as `app_${string}`)
         }
         
         setIsInitialized(true)
