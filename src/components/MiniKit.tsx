@@ -379,6 +379,70 @@ export function WorldIDVerification() {
       router.push('/tracker')
     }, 1000)
   }
+
+  // Handle World ID verification for web users
+  const handleWebVerification = async () => {
+    setIsVerifying(true)
+    setVerificationError(null)
+
+    try {
+      console.log('Starting web-based World ID verification...')
+      
+      // Check environment configuration
+      const appId = process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                   process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || 
+                   process.env.WLD_APP_ID ||
+                   process.env.APP_ID
+                   
+      const action = process.env.NEXT_PUBLIC_WLD_ACTION || 
+                    process.env.NEXT_PUBLIC_WORLDCOIN_ACTION || 
+                    'verify-human'
+
+      if (!appId) {
+        throw new Error('World ID app configuration missing. Please contact support.')
+      }
+
+      // Try to use web verification methods
+      if (typeof window !== 'undefined') {
+        try {
+          // For now, use redirect method since IDKit may not be available
+          // In the future, this could be enhanced with QR code generation
+          
+          const worldIdUrl = `https://worldapp.org/verify?app_id=${encodeURIComponent(appId)}&action=${encodeURIComponent(action)}&redirect_uri=${encodeURIComponent(window.location.origin + '/verify-callback')}`
+          
+          console.log('Redirecting to World ID verification:', worldIdUrl)
+          
+          // Store state for return
+          sessionStorage.setItem('worldid_verification_pending', JSON.stringify({
+            timestamp: Date.now(),
+            appId,
+            action
+          }))
+          
+          // Show user what's happening
+          setVerificationError('Redirecting to World ID verification...')
+          
+          // Redirect after a short delay
+          setTimeout(() => {
+            window.location.href = worldIdUrl
+          }, 1500)
+          
+        } catch (redirectError) {
+          console.error('Failed to redirect to World ID:', redirectError)
+          throw new Error('World ID verification not available in web browser. Please try downloading World App or use Guest Mode.')
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Web verification failed'
+      console.error('Web verification error:', {
+        error: errorMessage,
+        timestamp: new Date().toISOString()
+      })
+      setVerificationError(errorMessage)
+    } finally {
+      setIsVerifying(false)
+    }
+  }
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
@@ -434,10 +498,10 @@ export function WorldIDVerification() {
                   <Smartphone className="w-8 h-8 text-blue-600" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  World App Required
+                  Join Fit AI Chain
                 </h2>
                 <p className="text-gray-600 text-base leading-relaxed">
-                  Experience secure, human-verified calorie tracking with the best mobile interface. World ID ensures a trusted community.
+                  Choose how you'd like to access the app. World ID provides secure human verification, or try Guest Mode for immediate access.
                 </p>
               </div>
               
@@ -473,33 +537,57 @@ export function WorldIDVerification() {
                 </div>
               </div>
               
-              <div className="bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl p-4 border border-orange-200">
-                <h3 className="font-bold text-orange-800 mb-3 flex items-center">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 border border-blue-200">
+                <h3 className="font-bold text-blue-800 mb-3 flex items-center">
                   <Target className="w-5 h-5 mr-2" />
-                  Getting Started
+                  Verification Options
                 </h3>
-                <div className="space-y-2 text-sm text-orange-700">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs font-bold text-orange-800">1</div>
-                    <span>Download & install World App</span>
+                <div className="space-y-3 text-sm text-blue-700">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold text-blue-800 mt-0.5">1</div>
+                    <div>
+                      <div className="font-medium">World ID Verification</div>
+                      <div className="text-blue-600 text-xs">Secure human verification with blockchain proof</div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs font-bold text-orange-800">2</div>
-                    <span>Complete World ID verification</span>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold text-blue-800 mt-0.5">2</div>
+                    <div>
+                      <div className="font-medium">World App (Recommended)</div>
+                      <div className="text-blue-600 text-xs">Best experience with mobile app integration</div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs font-bold text-orange-800">3</div>
-                    <span>Search for "Fit AI Chain"</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center text-xs font-bold text-orange-800">4</div>
-                    <span>Start tracking & earning XP!</span>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold text-blue-800 mt-0.5">3</div>
+                    <div>
+                      <div className="font-medium">Guest Mode (7 days)</div>
+                      <div className="text-blue-600 text-xs">Try all features without verification</div>
+                    </div>
                   </div>
                 </div>
               </div>
               
               <Button 
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all"
+                onClick={handleWebVerification}
+                disabled={isVerifying}
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-5 h-5 mr-3" />
+                    Verify with World ID
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="w-full border-2 border-blue-200 text-blue-700 hover:bg-blue-50 font-medium py-4 rounded-2xl"
                 onClick={() => window.open('https://worldapp.org/', '_blank')}
               >
                 <Smartphone className="w-5 h-5 mr-3" />
@@ -595,14 +683,43 @@ export function WorldIDVerification() {
                 </div>
 
                 {verificationError && (
-                  <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                  <div className={`border rounded-2xl p-4 ${
+                    verificationError.includes('Redirecting') 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <AlertCircle className="w-4 h-4 text-red-500" />
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        verificationError.includes('Redirecting')
+                          ? 'bg-blue-100'
+                          : 'bg-red-100'
+                      }`}>
+                        {verificationError.includes('Redirecting') ? (
+                          <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                        )}
                       </div>
                       <div className="flex-1">
-                        <div className="text-red-800 font-medium text-sm">Verification Failed</div>
-                        <p className="text-red-600 text-xs mt-1">{verificationError}</p>
+                        <div className={`font-medium text-sm ${
+                          verificationError.includes('Redirecting')
+                            ? 'text-blue-800'
+                            : 'text-red-800'
+                        }`}>
+                          {verificationError.includes('Redirecting') ? 'Processing...' : 'Verification Failed'}
+                        </div>
+                        <p className={`text-xs mt-1 ${
+                          verificationError.includes('Redirecting')
+                            ? 'text-blue-600'
+                            : 'text-red-600'
+                        }`}>
+                          {verificationError}
+                        </p>
+                        {verificationError.includes('web browser') && !verificationError.includes('Redirecting') && (
+                          <p className="text-red-500 text-xs mt-2">
+                            💡 Try downloading World App or use Guest Mode to continue
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
