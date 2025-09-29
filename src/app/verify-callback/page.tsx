@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { saveUserDataSafely } from '@/utils/userDataManager'
 
-export default function VerifyCallbackPage() {
+function VerifyCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -134,5 +134,28 @@ export default function VerifyCallbackPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Loading fallback component
+function VerifyCallbackLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-white/90 backdrop-blur">
+        <CardContent className="p-8 text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-blue-500" />
+          <h2 className="text-xl font-bold text-gray-900">Loading...</h2>
+          <p className="text-gray-600">Preparing verification...</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default function VerifyCallbackPage() {
+  return (
+    <Suspense fallback={<VerifyCallbackLoading />}>
+      <VerifyCallbackContent />
+    </Suspense>
   )
 }
