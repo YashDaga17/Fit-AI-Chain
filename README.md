@@ -2,7 +2,44 @@
 
 **Transform your nutrition journey with AI-powered food analysis and gamified tracking!**
 
-Fit AI Chain is a cutting-edge calorie tracking application that combines artificial intelligence, blockchain-verified identity, and gamification to make nutrition tracking engaging and accurate. Snap a photo of your food and get instant, detailed nutritional analysis with XP rewards and competitive leaderboards.
+Fit AI Chain is a cutting-edge calorie tracking application that combines artificial intelligence, blockchain-verified id## 🚀 New User Experience
+
+### First-Time User Flow
+
+1. **Landing Page**: Users arrive at the verification screen
+2. **Environment Detection**: App detects if running in World App or web browser
+3. **Verification Options**:
+   - **World App Users**: Full World ID verification with blockchain proof
+   - **Web Users**: Guest mode option for trying the app
+4. **Data Initialization**: Automatic setup of user data structure
+5. **Tracker Access**: Seamless transition to the main tracking interface
+
+### Guest Mode Features
+
+For users who want to try the app without World ID verification:
+
+- **Temporary Access**: 7-day trial period
+- **Local Storage**: All data stays on the device
+- **Full Functionality**: Complete access to AI food analysis and XP system
+- **Easy Upgrade**: Can verify with World ID later for permanent access
+- **Data Migration**: Guest data can be preserved when upgrading
+
+### Data Management
+
+The app automatically initializes:
+- **User Stats**: XP, level, streak, calories tracked
+- **Food Entries**: Empty array ready for first food log
+- **Preferences**: Theme, units, notification settings
+- **Verification Status**: Secure token with expiration handling
+
+### Error Handling
+
+- **Graceful Degradation**: App works even with missing environment variables
+- **Recovery Systems**: Automatic cleanup of corrupted localStorage data
+- **Validation**: Input sanitization and type checking throughout
+- **Fallbacks**: Alternative flows when primary systems fail
+
+## 🔧 Troubleshootingntity, and gamification to make nutrition tracking engaging and accurate. Snap a photo of your food and get instant, detailed nutritional analysis with XP rewards and competitive leaderboards.
 
 ## ✨ Key Features
 

@@ -86,9 +86,16 @@ export async function POST(request: NextRequest) {
     console.log('Verification request from IP:', clientIP)
     console.log('Environment check:', {
       NODE_ENV: process.env.NODE_ENV,
-      hasAppId: !!process.env.APP_ID,
-      hasPublicAppId: !!process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID,
-      appIdFormat: (process.env.APP_ID || process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID)?.substring(0, 4),
+      hasAppId: !!(process.env.APP_ID || 
+                  process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                  process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID ||
+                  process.env.WLD_APP_ID),
+      hasPublicAppId: !!(process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                        process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID),
+      appIdFormat: (process.env.APP_ID || 
+                   process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                   process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID ||
+                   process.env.WLD_APP_ID)?.substring(0, 4),
     })
     
     if (isVerifyRateLimited(clientIP)) {
@@ -146,7 +153,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { payload, action, signal } = body
-    const app_id = (process.env.APP_ID || process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID) as `app_${string}`
+    const app_id = (process.env.APP_ID || 
+                    process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                    process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID ||
+                    process.env.WLD_APP_ID) as `app_${string}`
     
     if (!app_id) {
       console.error('App ID not configured - check environment variables')

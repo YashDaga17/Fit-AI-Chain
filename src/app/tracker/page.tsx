@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { getUserLevel, getXPProgress, calculateStreakMultiplier, getAchievements, FOOD_TRACKING_LEVELS } from '@/utils/levelingSystem'
+import { loadUserDataSafely, saveUserDataSafely, initializeNewUserData } from '@/utils/userDataManager'
 
 interface FoodEntry {
   id: string
@@ -68,42 +69,76 @@ export default function TrackerPage() {
       return
     }
 
+    // Validate verification and check expiry
+    try {
+      const verification = JSON.parse(verificationData)
+      const now = Date.now()
+      
+      if (!verification.verified || (verification.expiresAt && now > verification.expiresAt)) {
+        console.log('Verification expired or invalid, redirecting to home')
+        localStorage.removeItem('worldid_verification')
+        router.push('/')
+        return
+      }
+    } catch (error) {
+      console.error('Error parsing verification data:', error)
+      localStorage.removeItem('worldid_verification')
+      router.push('/')
+      return
+    }
+
+    // Initialize data for new users
+    initializeUserData()
+    
     // Load saved data with proper null checks and defaults
-    const savedEntries = localStorage.getItem('food_entries')
-    const savedStats = localStorage.getItem('user_stats')
-    
-    if (savedEntries) {
-      try {
-        const entries = JSON.parse(savedEntries)
-        setFoodEntries(Array.isArray(entries) ? entries : [])
-      } catch (error) {
-        console.error('Error parsing saved entries:', error)
-        setFoodEntries([])
-      }
-    }
-    
-    if (savedStats) {
-      try {
-        const stats = JSON.parse(savedStats)
-        setUserStats({
-          totalCalories: Number(stats.totalCalories) || 0,
-          totalXP: Number(stats.totalXP) || 0,
-          streak: Number(stats.streak) || 1,
-          level: Number(stats.level) || 1,
-          rank: Number(stats.rank) || 1
-        })
-      } catch (error) {
-        console.error('Error parsing saved stats:', error)
-        setUserStats({
-          totalCalories: 0,
-          totalXP: 0,
-          streak: 1,
-          level: 1,
-          rank: 1
-        })
-      }
-    }
+    loadUserData()
   }, [router])
+
+  const initializeUserData = () => {
+    try {
+      const userData = loadUserDataSafely()
+      
+      // If no data exists, initialize defaults
+      if (!userData.stats && !userData.preferences && userData.entries.length === 0) {
+        const defaultData = initializeNewUserData()
+        saveUserDataSafely({
+          stats: defaultData.stats,
+          preferences: defaultData.preferences,
+          entries: defaultData.entries
+        })
+        setUserStats(defaultData.stats)
+        setFoodEntries(defaultData.entries)
+        console.log('Initialized new user data in tracker')
+      }
+    } catch (error) {
+      console.error('Error initializing user data:', error)
+    }
+  }
+
+  const loadUserData = () => {
+    try {
+      const userData = loadUserDataSafely()
+      
+      // Load or initialize stats
+      if (userData.stats) {
+        setUserStats(userData.stats)
+      } else {
+        const defaultData = initializeNewUserData()
+        setUserStats(defaultData.stats)
+        saveUserDataSafely({ stats: defaultData.stats })
+      }
+      
+      // Load entries
+      setFoodEntries(userData.entries)
+      
+    } catch (error) {
+      console.error('Error loading user data:', error)
+      // Fallback to defaults
+      const defaultData = initializeNewUserData()
+      setUserStats(defaultData.stats)
+      setFoodEntries(defaultData.entries)
+    }
+  }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

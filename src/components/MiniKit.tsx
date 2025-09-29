@@ -19,6 +19,7 @@ import {
   Home
 } from 'lucide-react'
 import { logEnvironmentStatus } from '@/utils/environmentValidation'
+import { initializeNewUserData, loadUserDataSafely, saveUserDataSafely, createGuestVerification } from '@/utils/userDataManager'
 
 interface MiniKitProviderProps {
   children: React.ReactNode
@@ -89,7 +90,10 @@ export function MiniKitProvider({ children }: MiniKitProviderProps) {
         const validation = logEnvironmentStatus()
         
         // Check for app ID with multiple possible environment variable names
-        const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || process.env.NEXT_PUBLIC_WLD_APP_ID
+        const appId = process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                     process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || 
+                     process.env.WLD_APP_ID ||
+                     process.env.APP_ID
         if (!appId) {
           console.warn('World ID app ID not configured - World App features will be limited')
           setIsInitialized(true) // Still allow app to work without World ID
@@ -163,15 +167,37 @@ export function WorldIDVerification() {
             setIsVerified(true)
             router.push('/tracker')
           } else {
+            // Clear expired verification
             localStorage.removeItem('worldid_verification')
           }
+        } else {
+          // Initialize new user data structure
+          console.log('New user detected - initializing default data')
+          initializeNewUserDataLocal()
         }
       } catch (error) {
         console.error('Error checking verification status:', error)
         localStorage.removeItem('worldid_verification')
+        // Initialize for new user on error
+        initializeNewUserDataLocal()
       }
     }
   }, [mounted, router])
+
+  // Initialize default data for new users
+  const initializeNewUserDataLocal = () => {
+    try {
+      const defaultData = initializeNewUserData()
+      saveUserDataSafely({
+        stats: defaultData.stats,
+        preferences: defaultData.preferences,
+        entries: defaultData.entries
+      })
+      console.log('Initialized new user data')
+    } catch (error) {
+      console.error('Error initializing new user data:', error)
+    }
+  }
 
   const handleVerification = async () => {
     setIsVerifying(true)
@@ -183,10 +209,16 @@ export function WorldIDVerification() {
       // Enhanced environment check
       const envCheck = {
         NODE_ENV: process.env.NODE_ENV,
-        hasAppId: !!process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID,
-        hasAction: !!process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
-        appIdFormat: process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID?.substring(0, 10) + '...',
-        action: process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
+        hasAppId: !!(process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                    process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || 
+                    process.env.WLD_APP_ID ||
+                    process.env.APP_ID),
+        hasAction: !!(process.env.NEXT_PUBLIC_WLD_ACTION || 
+                     process.env.NEXT_PUBLIC_WORLDCOIN_ACTION),
+        appIdFormat: (process.env.NEXT_PUBLIC_WLD_APP_ID || 
+                     process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID)?.substring(0, 10) + '...',
+        action: process.env.NEXT_PUBLIC_WLD_ACTION || 
+               process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
         signal: process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL || 'empty',
         isWorldApp,
         userAgent: typeof window !== 'undefined' ? window.navigator.userAgent.substring(0, 50) + '...' : 'N/A'
@@ -205,7 +237,9 @@ export function WorldIDVerification() {
       const { VerificationLevel } = await import('@worldcoin/minikit-js')
 
       const verifyPayload = {
-        action: process.env.NEXT_PUBLIC_WORLDCOIN_ACTION || 'verify',
+        action: process.env.NEXT_PUBLIC_WLD_ACTION || 
+               process.env.NEXT_PUBLIC_WORLDCOIN_ACTION || 
+               'verify-human',
         signal: process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL || '',
         verification_level: VerificationLevel.Device,
       }
@@ -292,17 +326,24 @@ export function WorldIDVerification() {
       }
       
       if (verifyData.verified) {
-        // Store verification
+        // Store verification with enhanced data
         const verificationData = {
           verified: true,
           timestamp: Date.now(),
           action: verifyPayload.action,
+          nullifierHash: response.nullifier_hash,
+          verificationType: 'worldid',
+          expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
         }
         
         localStorage.setItem('worldid_verification', JSON.stringify(verificationData))
         console.log('Verification completed successfully')
         setIsVerified(true)
-        router.push('/tracker')
+        
+        // Small delay to show success state before navigation
+        setTimeout(() => {
+          router.push('/tracker')
+        }, 1000)
       } else {
         throw new Error(verifyData.error || 'Verification was not successful')
       }
@@ -320,7 +361,24 @@ export function WorldIDVerification() {
     }
   }
 
-  // Show loading state during hydration
+  // Handle guest mode for non-World App users
+  const handleGuestMode = () => {
+    const guestVerificationData = createGuestVerification()
+    
+    saveUserDataSafely({
+      verification: guestVerificationData
+    })
+    
+    console.log('Guest mode activated')
+    setIsVerified(true)
+    
+    // Initialize guest user data
+    initializeNewUserDataLocal()
+    
+    setTimeout(() => {
+      router.push('/tracker')
+    }, 1000)
+  }
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
@@ -328,6 +386,24 @@ export function WorldIDVerification() {
           <CardContent className="p-8 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-orange-500" />
             <p className="text-gray-600">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show success state when verified (before navigation)
+  if (isVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl border-0 bg-white/90 backdrop-blur">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Verification Successful!</h2>
+            <p className="text-gray-600">Redirecting to your tracker...</p>
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-green-500" />
           </CardContent>
         </Card>
       </div>
@@ -429,6 +505,31 @@ export function WorldIDVerification() {
                 <Smartphone className="w-5 h-5 mr-3" />
                 Download World App
               </Button>
+              
+              {/* Guest Mode Option */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or try without verification</span>
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline"
+                className="w-full border-2 border-orange-200 text-orange-700 hover:bg-orange-50 font-medium py-4 rounded-2xl"
+                onClick={handleGuestMode}
+              >
+                <Home className="w-5 h-5 mr-3" />
+                Continue as Guest
+              </Button>
+              
+              <div className="bg-orange-50 rounded-xl p-3 border border-orange-200">
+                <div className="text-xs text-orange-700 text-center">
+                  <strong>Guest Mode:</strong> Try the app with limited features. Your data stays on this device only.
+                </div>
+              </div>
               
               <div className="text-center">
                 <p className="text-xs text-gray-500">
