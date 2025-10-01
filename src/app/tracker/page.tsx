@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Trophy, Zap, TrendingUp, Star, Award, Loader2, Heart, Target, Flame, Home, BarChart3, AlertTriangle, Lightbulb, User } from 'lucide-react'
+import { Camera, Trophy, Zap, TrendingUp, Star, Award, Loader2, Heart, Target, Flame, BarChart3, AlertTriangle, Lightbulb, User, Activity, House } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -63,26 +63,24 @@ export default function TrackerPage() {
 
   useEffect(() => {
     // Check if user is verified
-    const verificationData = localStorage.getItem('worldid_verification')
-    if (!verificationData) {
+    const userData = loadUserDataSafely()
+    if (!userData.verification || !userData.verification.verified) {
       router.push('/')
       return
     }
 
     // Validate verification and check expiry
     try {
-      const verification = JSON.parse(verificationData)
+      const verification = userData.verification
       const now = Date.now()
       
       if (!verification.verified || (verification.expiresAt && now > verification.expiresAt)) {
         console.log('Verification expired or invalid, redirecting to home')
-        localStorage.removeItem('worldid_verification')
         router.push('/')
         return
       }
     } catch (error) {
       console.error('Error parsing verification data:', error)
-      localStorage.removeItem('worldid_verification')
       router.push('/')
       return
     }
@@ -730,7 +728,7 @@ export default function TrackerPage() {
             onClick={() => router.push('/')}
           >
             <div className="w-6 h-6 flex items-center justify-center">
-              <Home className="w-5 h-5 text-gray-600" />
+              <House className="w-5 h-5 text-gray-600" />
             </div>
             <span className="text-xs text-gray-600">Home</span>
           </Button>
@@ -741,7 +739,7 @@ export default function TrackerPage() {
             className="flex flex-col items-center space-y-1 h-auto py-2 bg-orange-100 text-orange-600 rounded-2xl px-4"
           >
             <div className="w-6 h-6 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5" />
+              <Activity className="h-5 w-5" />
             </div>
             <span className="text-xs font-medium">Tracker</span>
           </Button>

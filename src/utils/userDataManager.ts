@@ -26,9 +26,14 @@ export interface VerificationData {
   timestamp: number
   action: string
   nullifierHash?: string
-  verificationType: 'worldid' | 'guest'
+  verificationType: 'worldid' | 'guest' | 'wallet'
   expiresAt?: number
   isGuest?: boolean
+  // Wallet-specific fields
+  address?: string
+  signature?: string
+  message?: string
+  username?: string
 }
 
 /**

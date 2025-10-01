@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Trophy, Medal, Award, Zap, Calendar, Flame, Target, Home, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Trophy, Medal, Award, Zap, Calendar, Flame, Target, TrendingUp, Activity, House } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,8 +24,8 @@ export default function LeaderboardPage() {
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'alltime'>('weekly')
 
   useEffect(() => {
-    const verificationData = localStorage.getItem('worldid_verification')
-    if (!verificationData) {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+    if (!userData.verification || !userData.verification.verified) {
       router.push('/')
       return
     }
@@ -34,7 +34,9 @@ export default function LeaderboardPage() {
   }, [router, timeframe])
 
   const generateMockLeaderboard = () => {
-    const userStats = JSON.parse(localStorage.getItem('user_stats') || '{"totalXP": 0, "level": 1, "streak": 1, "totalCalories": 0}')
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+    const userStats = userData.stats || { totalXP: 0, level: 1, streak: 1, totalCalories: 0 }
+    const verification = userData.verification || {}
     
     const safeUserStats = {
       totalXP: Number(userStats.totalXP) || 0,
@@ -43,13 +45,16 @@ export default function LeaderboardPage() {
       totalCalories: Number(userStats.totalCalories) || 0
     }
     
+    // Use the real username from wallet authentication if available
+    const userName = verification.username || verification.address?.slice(-6) || 'You'
+    
     const mockData: LeaderboardEntry[] = [
       { rank: 1, name: 'FoodMaster99', totalXP: 2840, level: 28, streak: 45, totalCalories: 28400, avatar: '🍕' },
       { rank: 2, name: 'HealthyEater', totalXP: 2650, level: 26, streak: 38, totalCalories: 26500, avatar: '🥗' },
       { rank: 3, name: 'CalorieKing', totalXP: 2380, level: 23, streak: 32, totalCalories: 23800, avatar: '👑' },
       { rank: 4, name: 'FitnessFan', totalXP: 2120, level: 21, streak: 28, totalCalories: 21200, avatar: '💪' },
       { rank: 5, name: 'NutritionNinja', totalXP: 1980, level: 19, streak: 24, totalCalories: 19800, avatar: '🥷' },
-      { rank: 6, name: 'You', totalXP: safeUserStats.totalXP, level: safeUserStats.level, streak: safeUserStats.streak, totalCalories: safeUserStats.totalCalories, avatar: '🎯' },
+      { rank: 6, name: userName, totalXP: safeUserStats.totalXP, level: safeUserStats.level, streak: safeUserStats.streak, totalCalories: safeUserStats.totalCalories, avatar: verification.verificationType === 'wallet' ? '🔗' : '🎯' },
       { rank: 7, name: 'WellnessWarrior', totalXP: 1650, level: 16, streak: 18, totalCalories: 16500, avatar: '⚔️' },
       { rank: 8, name: 'SnapAndTrack', totalXP: 1420, level: 14, streak: 15, totalCalories: 14200, avatar: '📸' },
       { rank: 9, name: 'BalancedLife', totalXP: 1180, level: 11, streak: 12, totalCalories: 11800, avatar: '⚖️' },
@@ -59,7 +64,7 @@ export default function LeaderboardPage() {
     const sorted = mockData.sort((a, b) => (b.totalXP || 0) - (a.totalXP || 0))
     sorted.forEach((entry, index) => {
       entry.rank = index + 1
-      if (entry.name === 'You') {
+      if (entry.name === userName) {
         setUserRank(entry.rank)
       }
     })
@@ -304,7 +309,7 @@ export default function LeaderboardPage() {
             onClick={() => router.push('/')}
           >
             <div className="w-6 h-6 flex items-center justify-center">
-              <Home className="w-5 h-5 text-gray-600" />
+              <House className="w-5 h-5 text-gray-600" />
             </div>
             <span className="text-xs text-gray-600">Home</span>
           </Button>
@@ -316,7 +321,7 @@ export default function LeaderboardPage() {
             onClick={() => router.push('/tracker')}
           >
             <div className="w-6 h-6 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-gray-600" />
+              <Activity className="w-5 h-5 text-gray-600" />
             </div>
             <span className="text-xs text-gray-600">Tracker</span>
           </Button>

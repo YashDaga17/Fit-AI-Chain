@@ -77,6 +77,47 @@ class SafeMiniKit {
     }
     return null
   }
+
+  static async walletAuth() {
+    try {
+      const miniKit = await this.getInstance()
+      if (miniKit && miniKit.commandsAsync && miniKit.commandsAsync.walletAuth) {
+        const nonce = Math.random().toString(36).substring(2, 15)
+        const requestId = Math.random().toString(36).substring(2, 15)
+        
+        const response = await miniKit.commandsAsync.walletAuth({
+          nonce,
+          requestId,
+          expirationTime: new Date(Date.now() + 1000 * 60 * 10), // 10 minutes
+          notBefore: new Date(),
+        })
+
+        if (!response || !response.commandPayload) {
+          throw new Error('No response from wallet authentication')
+        }
+
+        const payload = response.commandPayload as any
+        
+        if (payload.status === 'error') {
+          throw new Error(`Wallet authentication failed: ${payload.error_code || 'Unknown error'}`)
+        }
+
+        if (payload.status === 'success') {
+          return { 
+            address: payload.address, 
+            signature: payload.signature,
+            message: payload.message
+          }
+        }
+
+        throw new Error('Unexpected wallet authentication response')
+      }
+    } catch (error) {
+      console.error('Failed to authenticate with MiniKit:', error)
+      throw error
+    }
+    throw new Error('MiniKit wallet authentication not available')
+  }
 }
 
 export function MiniKitProvider({ children }: MiniKitProviderProps) {
@@ -199,31 +240,12 @@ export function WorldIDVerification() {
     }
   }
 
-  const handleVerification = async () => {
+  const handleWalletAuth = async () => {
     setIsVerifying(true)
     setVerificationError(null)
 
     try {
-      console.log('Starting verification process...')
-      
-      // Enhanced environment check
-      const envCheck = {
-        NODE_ENV: process.env.NODE_ENV,
-        hasAppId: !!(process.env.NEXT_PUBLIC_WLD_APP_ID || 
-                    process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || 
-                    process.env.WLD_APP_ID ||
-                    process.env.APP_ID),
-        hasAction: !!(process.env.NEXT_PUBLIC_WLD_ACTION || 
-                     process.env.NEXT_PUBLIC_WORLDCOIN_ACTION),
-        appIdFormat: (process.env.NEXT_PUBLIC_WLD_APP_ID || 
-                     process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID)?.substring(0, 10) + '...',
-        action: process.env.NEXT_PUBLIC_WLD_ACTION || 
-               process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
-        signal: process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL || 'empty',
-        isWorldApp,
-        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent.substring(0, 50) + '...' : 'N/A'
-      }
-      console.log('Environment check:', envCheck)
+      console.log('Starting wallet authentication...')
       
       // Check if MiniKit is available
       const miniKitInstalled = await SafeMiniKit.isInstalled()
@@ -233,21 +255,45 @@ export function WorldIDVerification() {
         throw new Error('MiniKit is not available. Please make sure you are using World App.')
       }
 
-      // Import verification types dynamically
-      const { VerificationLevel } = await import('@worldcoin/minikit-js')
+      // Use wallet authentication for better reliability
+      const walletResult = await SafeMiniKit.walletAuth()
+      console.log('Wallet authentication successful:', { 
+        hasAddress: !!walletResult.address,
+        hasSignature: !!walletResult.signature 
+      })
 
-      const verifyPayload = {
-        action: process.env.NEXT_PUBLIC_WLD_ACTION || 
-               process.env.NEXT_PUBLIC_WORLDCOIN_ACTION || 
-               'verify-human',
-        signal: process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL || '',
-        verification_level: VerificationLevel.Device,
+      // Create a username from the wallet address
+      const username = `User${walletResult.address.slice(-6)}`
+
+      // Store wallet authentication data
+      const authData = {
+        verified: true,
+        timestamp: Date.now(),
+        address: walletResult.address,
+        signature: walletResult.signature,
+        message: walletResult.message,
+        username: username,
+        verificationType: 'wallet' as const,
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
       }
+      
+      saveUserDataSafely({ verification: authData })
+      console.log('Wallet authentication data saved successfully')
 
-      console.log('Verification payload:', {
-        action: verifyPayload.action,
-        signal: verifyPayload.signal ? 'present' : 'empty',
-        verification_level: 'Device'
+      setVerificationSuccess(true)
+      
+      // Redirect to tracker after short delay
+      setTimeout(() => {
+        router.push('/tracker')
+      }, 1500)
+
+    } catch (error) {
+      console.error('Wallet authentication error:', error)
+      setVerificationError(error instanceof Error ? error.message : 'Wallet authentication failed')
+    } finally {
+      setIsVerifying(false)
+    }
+  }
       })
 
       let response
