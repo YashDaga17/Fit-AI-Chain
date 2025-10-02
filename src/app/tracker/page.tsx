@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Trophy, Zap, TrendingUp, Star, Award, Loader2, Heart, Target, Flame, BarChart3, AlertTriangle, Lightbulb, User, Activity, House } from 'lucide-react'
+import { Camera, Trophy, Zap, TrendingUp, Star, Award, Loader2, Heart, Target, Flame, BarChart3, AlertTriangle, Lightbulb, User, Activity, House, Users, Clock, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getUserLevel, getXPProgress, calculateStreakMultiplier, getAchievements, FOOD_TRACKING_LEVELS } from '@/utils/levelingSystem'
 import { loadUserDataSafely, saveUserDataSafely, initializeNewUserData } from '@/utils/userDataManager'
+import { MealTrackingStatus, Stake, Group } from '@/types/teams'
 
 interface FoodEntry {
   id: string
@@ -55,6 +57,15 @@ export default function TrackerPage() {
     rank: 1
   })
   const [mounted, setMounted] = useState(false)
+  
+  // Team functionality state
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [mealStatus, setMealStatus] = useState<MealTrackingStatus[]>([])
+  const [activeStakes, setActiveStakes] = useState<Stake[]>([])
+  const [userGroups, setUserGroups] = useState<Group[]>([])
+  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | null>(null)
+  const [selectedStake, setSelectedStake] = useState<Stake | null>(null)
+  const [showMealDialog, setShowMealDialog] = useState(false)
 
   // Prevent hydration mismatch by ensuring client-side only rendering for dynamic content
   useEffect(() => {
@@ -90,7 +101,19 @@ export default function TrackerPage() {
     
     // Load saved data with proper null checks and defaults
     loadUserData()
+
+    // Initialize team functionality
+    initializeTeamData()
   }, [router])
+
+  // Load team-related data
+  useEffect(() => {
+    if (currentUser) {
+      loadMealStatus()
+      loadActiveStakes()
+      loadUserGroups()
+    }
+  }, [currentUser])
 
   const initializeUserData = () => {
     try {
@@ -138,16 +161,88 @@ export default function TrackerPage() {
     }
   }
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string)
-        analyzeFood(e.target?.result as string)
+  // Team data initialization and loading functions
+  const initializeTeamData = async () => {
+    try {
+      // Get current user from WorldID verification
+      const verification = localStorage.getItem('worldid_verification')
+      if (verification) {
+        const verificationData = JSON.parse(verification)
+        
+        // Check if user exists in database
+        const userResponse = await fetch(`/api/users?nullifier_hash=${verificationData.nullifier_hash}`)
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          if (userData.user) {
+            setCurrentUser(userData.user)
+          } else {
+            // Create new user in database
+            const createResponse = await fetch('/api/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                nullifier_hash: verificationData.nullifier_hash,
+                username: `user_${verificationData.nullifier_hash.slice(0, 8)}`,
+                world_id_verified: true
+              })
+            })
+            
+            if (createResponse.ok) {
+              const newUserData = await createResponse.json()
+              setCurrentUser(newUserData.user)
+            }
+          }
+        }
       }
-      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Error initializing team data:', error)
     }
+  }
+
+  const loadMealStatus = async () => {
+    if (!currentUser) return
+    
+    try {
+      const response = await fetch(`/api/meal-windows?user_id=${currentUser.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setMealStatus(data.meal_windows || [])
+      }
+    } catch (error) {
+      console.error('Error loading meal status:', error)
+    }
+  }
+
+  const loadActiveStakes = async () => {
+    if (!currentUser) return
+    
+    try {
+      const response = await fetch(`/api/stakes?user_id=${currentUser.id}&status=active`)
+      if (response.ok) {
+        const data = await response.json()
+        setActiveStakes(data.stakes || [])
+      }
+    } catch (error) {
+      console.error('Error loading active stakes:', error)
+    }
+  }
+
+  const loadUserGroups = async () => {
+    if (!currentUser) return
+    
+    try {
+      const response = await fetch(`/api/groups?user_id=${currentUser.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserGroups(data.groups || [])
+      }
+    } catch (error) {
+      console.error('Error loading user groups:', error)
+    }
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleImageUploadWithMealSelection(event)
   }
 
   const analyzeFood = async (imageData: string) => {
@@ -217,14 +312,104 @@ export default function TrackerPage() {
         // Save to localStorage
         localStorage.setItem('food_entries', JSON.stringify(updatedEntries))
         localStorage.setItem('user_stats', JSON.stringify(newStats))
+
+        // Save to database if user is logged in and teams are available
+        if (currentUser) {
+          await saveFoodEntryToDatabase(newEntry, result)
+          
+          // Update user stats in database
+          await fetch('/api/users', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: currentUser.id,
+              total_calories: newStats.totalCalories,
+              total_xp: newStats.totalXP,
+              streak: newStats.streak,
+              level: newStats.level,
+              total_entries: (currentUser.total_entries || 0) + 1
+            })
+          })
+
+          // Reload meal status and stakes
+          await loadMealStatus()
+          await loadActiveStakes()
+        }
         
         setSelectedImage(null)
+        setShowMealDialog(false)
+        setSelectedMealType(null)
+        setSelectedStake(null)
       }
     } catch (error) {
       console.error('Error analyzing food:', error)
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  const saveFoodEntryToDatabase = async (entry: FoodEntry, analysisResult: any) => {
+    if (!currentUser) return
+
+    try {
+      await fetch('/api/food-entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          group_id: selectedStake?.group_id || null,
+          stake_id: selectedStake?.id || null,
+          food_name: entry.food,
+          calories: entry.calories,
+          xp_earned: entry.xp,
+          confidence: entry.confidence,
+          cuisine: entry.cuisine,
+          portion_size: entry.portionSize,
+          ingredients: entry.ingredients,
+          cooking_method: entry.cookingMethod,
+          nutrients: entry.nutrients,
+          health_score: entry.healthScore ? parseInt(entry.healthScore) : null,
+          allergens: entry.allergens,
+          alternatives: entry.alternatives,
+          image_url: entry.image, // In production, this would be uploaded to cloud storage
+          meal_type: selectedMealType
+        })
+      })
+    } catch (error) {
+      console.error('Error saving food entry to database:', error)
+    }
+  }
+
+  const handleImageUploadWithMealSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setSelectedImage(e.target?.result as string)
+        
+        // Check if there are active meal windows or stakes
+        const activeMealWindows = mealStatus.filter(m => m.is_active)
+        const hasActiveStakes = activeStakes.length > 0
+
+        if (activeMealWindows.length > 0 || hasActiveStakes) {
+          setShowMealDialog(true)
+        } else {
+          // No active meal windows or stakes, proceed normally
+          analyzeFood(e.target?.result as string)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const proceedWithAnalysis = () => {
+    if (selectedImage) {
+      analyzeFood(selectedImage)
+    }
+  }
+
+  const getCurrentMealWindow = () => {
+    return mealStatus.find(m => m.is_active)
   }
 
   const todaysCalories = foodEntries
@@ -296,6 +481,119 @@ export default function TrackerPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-32 pt-6 space-y-6">
+        {/* Teams Navigation */}
+        {userGroups.length > 0 && (
+          <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Users className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <h3 className="font-medium text-gray-900">Your Teams</h3>
+                    <p className="text-xs text-gray-500">{userGroups.length} groups • {activeStakes.length} active stakes</p>
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => router.push('/teams')}
+                  className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                >
+                  View All
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Active Meal Windows */}
+        {mealStatus.length > 0 && (
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-0 shadow-lg rounded-2xl">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-medium text-gray-900">Meal Windows</h3>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {mealStatus.map((meal) => (
+                  <div 
+                    key={meal.meal_type} 
+                    className={`p-3 rounded-xl text-center ${
+                      meal.is_active 
+                        ? 'bg-blue-100 border-2 border-blue-300' 
+                        : 'bg-white/60 border border-gray-200'
+                    }`}
+                  >
+                    <div className="text-xs font-medium capitalize mb-1">
+                      {meal.meal_type}
+                    </div>
+                    <div className="flex items-center justify-center space-x-1 text-xs text-gray-600">
+                      <span>{meal.current_images}</span>
+                      <span>/</span>
+                      <span>{meal.min_images}</span>
+                      {meal.current_images >= meal.min_images && (
+                        <CheckCircle className="h-3 w-3 text-green-500 ml-1" />
+                      )}
+                    </div>
+                    {meal.is_active && (
+                      <Badge variant="default" className="mt-1 text-xs bg-blue-600">
+                        Active
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Active Stakes Summary */}
+        {activeStakes.length > 0 && (
+          <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 border-0 shadow-lg rounded-2xl">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="h-5 w-5 text-yellow-600" />
+                  <h3 className="font-medium text-gray-900">Active Stakes</h3>
+                  <Badge variant="secondary">{activeStakes.length}</Badge>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => router.push('/teams')}
+                  className="border-yellow-200 text-yellow-600 hover:bg-yellow-50"
+                >
+                  View Stakes
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {activeStakes.slice(0, 2).map((stake) => (
+                  <div 
+                    key={stake.id} 
+                    className="flex items-center justify-between p-2 bg-white/60 rounded-lg cursor-pointer hover:bg-white/80"
+                    onClick={() => router.push(`/teams/stakes/${stake.id}`)}
+                  >
+                    <div>
+                      <div className="text-sm font-medium">
+                        {stake.competition_type === 'daily' ? 'Daily Challenge' : `${stake.meal_type} Challenge`}
+                      </div>
+                      <div className="text-xs text-gray-500">{stake.group_name}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-yellow-600">{stake.total_pool} WLD</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(stake.end_time).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Today's Progress Card */}
         <Card className="bg-gradient-to-br from-white to-orange-50/50 border-0 shadow-xl rounded-3xl overflow-hidden">
           <CardContent className="p-6">
@@ -750,22 +1048,136 @@ export default function TrackerPage() {
             variant="ghost"
             size="sm"
             className="flex flex-col items-center space-y-1 h-auto py-2 hover:bg-orange-50 rounded-2xl px-4"
-            onClick={() => router.push('/leaderboard')}
+            onClick={() => router.push('/teams')}
           >
-            <Trophy className="h-5 w-5 text-gray-600" />
-            <span className="text-xs text-gray-600">Leaderboard</span>
+            <Users className="h-5 w-5 text-gray-600" />
+            <span className="text-xs text-gray-600">Teams</span>
           </Button>
           
           <Button
             variant="ghost"
             size="sm"
             className="flex flex-col items-center space-y-1 h-auto py-2 hover:bg-orange-50 rounded-2xl px-4"
+            onClick={() => router.push('/leaderboard')}
           >
-            <User className="w-5 h-5 text-gray-600" />
-            <span className="text-xs text-gray-600">Profile</span>
+            <Trophy className="h-5 w-5 text-gray-600" />
+            <span className="text-xs text-gray-600">Leaderboard</span>
           </Button>
         </div>
       </div>
+
+      {/* Meal Selection Dialog */}
+      <Dialog open={showMealDialog} onOpenChange={setShowMealDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Meal Type</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Active Meal Windows */}
+            {mealStatus.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Active Meal Windows</h4>
+                <div className="space-y-2">
+                  {mealStatus.filter(m => m.is_active).map((meal) => (
+                    <Button
+                      key={meal.meal_type}
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => {
+                        setSelectedMealType(meal.meal_type as 'breakfast' | 'lunch' | 'dinner')
+                        // Find associated stake if any
+                        const relatedStake = activeStakes.find(s => 
+                          s.meal_type === meal.meal_type || s.competition_type === 'daily'
+                        )
+                        if (relatedStake) {
+                          setSelectedStake(relatedStake)
+                        }
+                        proceedWithAnalysis()
+                      }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4" />
+                        <span className="capitalize">{meal.meal_type}</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {meal.current_images}/{meal.min_images} images
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Active Stakes */}
+            {activeStakes.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Active Stakes</h4>
+                <div className="space-y-2">
+                  {activeStakes.map((stake) => (
+                    <Button
+                      key={stake.id}
+                      variant="outline"
+                      className="w-full text-left justify-between"
+                      onClick={() => {
+                        setSelectedStake(stake)
+                        if (stake.meal_type) {
+                          setSelectedMealType(stake.meal_type as 'breakfast' | 'lunch' | 'dinner')
+                        }
+                        proceedWithAnalysis()
+                      }}
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {stake.competition_type === 'daily' ? 'Daily Challenge' : `${stake.meal_type} Challenge`}
+                        </div>
+                        <div className="text-xs text-gray-500">{stake.group_name}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-yellow-600">{stake.total_pool} WLD</div>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Regular Meal Types */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Regular Meal</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => (
+                  <Button
+                    key={mealType}
+                    variant="outline"
+                    className="capitalize"
+                    onClick={() => {
+                      setSelectedMealType(mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack')
+                      setSelectedStake(null)
+                      proceedWithAnalysis()
+                    }}
+                  >
+                    {mealType}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                setShowMealDialog(false)
+                setSelectedImage(null)
+                setSelectedMealType(null)
+                setSelectedStake(null)
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

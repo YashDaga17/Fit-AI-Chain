@@ -166,7 +166,12 @@ function validateAndParseVerification(data: any): VerificationData | null {
       nullifierHash: data.nullifierHash,
       verificationType: data.verificationType || 'worldid',
       expiresAt: data.expiresAt,
-      isGuest: Boolean(data.isGuest)
+      isGuest: Boolean(data.isGuest),
+      // Wallet-specific fields
+      address: data.address,
+      signature: data.signature,
+      message: data.message,
+      username: data.username
     }
   } catch {
     return null
