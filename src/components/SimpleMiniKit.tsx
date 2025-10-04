@@ -49,45 +49,42 @@ class SafeMiniKit {
     }
   }
   
-  static async walletAuth() {
+  static async verifyWorldID(action: string = 'fit-ai-chain-login') {
     try {
       const miniKit = await this.getInstance()
-      if (miniKit && miniKit.commandsAsync && miniKit.commandsAsync.walletAuth) {
-        const nonce = Math.random().toString(36).substring(2, 15)
-        const requestId = Math.random().toString(36).substring(2, 15)
-        
-        const response = await miniKit.commandsAsync.walletAuth({
-          nonce,
-          requestId,
-          expirationTime: new Date(Date.now() + 1000 * 60 * 10), // 10 minutes
-          notBefore: new Date(),
+      if (miniKit && miniKit.commandsAsync && miniKit.commandsAsync.verify) {
+        const response = await miniKit.commandsAsync.verify({
+          action,
+          signal: '',
+          verification_level: 'orb' // or 'device'
         })
 
         if (!response || !response.commandPayload) {
-          throw new Error('No response from wallet authentication')
+          throw new Error('No response from World ID verification')
         }
 
         const payload = response.commandPayload as any
         
         if (payload.status === 'error') {
-          throw new Error(`Wallet authentication failed: ${payload.error_code || 'Unknown error'}`)
+          throw new Error(`World ID verification failed: ${payload.error_code || 'Unknown error'}`)
         }
 
         if (payload.status === 'success') {
-          return { 
-            address: payload.address, 
-            signature: payload.signature,
-            message: payload.message
+          return {
+            merkle_root: payload.merkle_root,
+            nullifier_hash: payload.nullifier_hash,
+            proof: payload.proof,
+            verification_level: payload.verification_level
           }
         }
 
-        throw new Error('Unexpected wallet authentication response')
+        throw new Error('Unexpected World ID verification response')
       }
     } catch (error) {
-      console.error('Failed to authenticate with MiniKit:', error)
+      console.error('Failed to verify with World ID:', error)
       throw error
     }
-    throw new Error('MiniKit wallet authentication not available')
+    throw new Error('World ID verification not available')
   }
 }
 
@@ -113,16 +110,20 @@ export function WorldIDVerification() {
       const isExpired = userData.verification.expiresAt && userData.verification.expiresAt < Date.now()
       if (!isExpired) {
         setIsVerified(true)
+        // Redirect to tracker if already verified
+        setTimeout(() => {
+          router.push('/tracker')
+        }, 1000)
       }
     }
   }, [])
 
-  const handleWalletAuth = async () => {
+  const handleWorldIDVerification = async () => {
     setIsVerifying(true)
     setVerificationError(null)
 
     try {
-      console.log('Starting wallet authentication...')
+      console.log('Starting World ID verification...')
       
       // Check if MiniKit is available
       const miniKitInstalled = await SafeMiniKit.isInstalled()
@@ -132,43 +133,43 @@ export function WorldIDVerification() {
         throw new Error('MiniKit is not available. Please make sure you are using World App.')
       }
 
-      // Use wallet authentication for better reliability
-      const walletResult = await SafeMiniKit.walletAuth()
-      console.log('Wallet authentication successful:', { 
-        hasAddress: !!walletResult.address,
-        hasSignature: !!walletResult.signature 
+      // Use World ID verification - this will show the popup for user to approve
+      const verificationResult = await SafeMiniKit.verifyWorldID('fit-ai-chain-login')
+      console.log('World ID verification successful:', { 
+        hasNullifierHash: !!verificationResult.nullifier_hash,
+        verificationLevel: verificationResult.verification_level 
       })
 
-      // Create a username from the wallet address
-      const username = `User${walletResult.address.slice(-6)}`
+      // Create a username from the nullifier hash
+      const username = `user_${verificationResult.nullifier_hash.slice(0, 8)}`
 
-      // Store wallet authentication data
+      // Store World ID verification data
       const authData = {
         verified: true,
         timestamp: Date.now(),
-        address: walletResult.address,
-        signature: walletResult.signature,
-        message: walletResult.message,
+        nullifierHash: verificationResult.nullifier_hash,
+        merkleRoot: verificationResult.merkle_root,
+        proof: verificationResult.proof,
+        verificationLevel: verificationResult.verification_level,
         username: username,
-        verificationType: 'wallet' as const,
-        action: 'wallet-auth',
-        nullifierHash: `wallet_${walletResult.address}`,
+        verificationType: 'worldid' as const,
+        action: 'fit-ai-chain-login',
         expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
       }
       
       saveUserDataSafely({ verification: authData })
-      console.log('Wallet authentication data saved successfully')
+      console.log('World ID verification data saved successfully')
 
       setIsVerified(true)
       
-      // Redirect to tracker after short delay
+      // Only redirect after user has successfully approved the verification
       setTimeout(() => {
         router.push('/tracker')
       }, 1500)
 
     } catch (error) {
-      console.error('Wallet authentication error:', error)
-      setVerificationError(error instanceof Error ? error.message : 'Wallet authentication failed')
+      console.error('World ID verification error:', error)
+      setVerificationError(error instanceof Error ? error.message : 'World ID verification failed')
     } finally {
       setIsVerifying(false)
     }
@@ -234,26 +235,26 @@ export function WorldIDVerification() {
           {isWorldApp ? (
             <div className="space-y-3">
               <Button 
-                onClick={handleWalletAuth}
+                onClick={handleWorldIDVerification}
                 disabled={isVerifying}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3"
               >
                 {isVerifying ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Connecting Wallet...
+                    Verifying with World ID...
                   </>
                 ) : (
                   <>
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Connect with World App
+                    <Shield className="w-4 h-4 mr-2" />
+                    Verify with World ID
                   </>
                 )}
               </Button>
               
               <div className="flex items-center space-x-2">
                 <Shield className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-600">Secure wallet authentication</span>
+                <span className="text-sm text-gray-600">Secure biometric verification</span>
               </div>
             </div>
           ) : (
