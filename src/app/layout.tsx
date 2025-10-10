@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -83,31 +85,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
+    <html lang="en">
       <head>
-        {/* PWA and Mobile optimizations */}
-        <link rel="apple-touch-icon" href="/icon-192.svg" />
-        <link rel="icon" type="image/svg+xml" href="/icon-192.svg" />
-        <link rel="shortcut icon" href="/icon-192.svg" />
-        
-        {/* Preload critical fonts */}
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-        />
-        <link
-          rel="preconnect" 
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
+        <Script
+          src="https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.0.0/dist/minikit.js"
+          strategy="beforeInteractive"
         />
       </head>
-      <body
-        className={`${inter.variable} font-sans antialiased min-h-screen`}
-        suppressHydrationWarning
-      >
-        <div className="min-h-screen safe-top safe-bottom">
-          {children}
-        </div>
+      <body className={`font-sans ${inter.variable}`}>
+        <Suspense fallback={null}>{children}</Suspense>
       </body>
     </html>
   );

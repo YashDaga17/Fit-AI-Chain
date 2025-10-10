@@ -4,12 +4,15 @@ const nextConfig: NextConfig = {
   images: {
     domains: ['localhost', 'api.qrserver.com'],
   },
+  // Explicitly allow dev origins for World App MiniKit and ngrok
+  allowedDevOrigins: process.env.NODE_ENV === 'development' 
+    ? ['localhost:3000', '127.0.0.1:3000', 'worldapp.org', '*.worldapp.org', '*.ngrok-free.dev', '*.ngrok.io']
+    : undefined,
   // Only expose necessary environment variables to client
   env: {
     NEXT_PUBLIC_WLD_APP_ID: process.env.NEXT_PUBLIC_WLD_APP_ID || process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID,
     NEXT_PUBLIC_WLD_ACTION: process.env.NEXT_PUBLIC_WLD_ACTION || process.env.NEXT_PUBLIC_WORLDCOIN_ACTION,
     NEXT_PUBLIC_WLD_SIGNAL: process.env.NEXT_PUBLIC_WLD_SIGNAL || process.env.NEXT_PUBLIC_WORLDCOIN_SIGNAL,
-    // Don't expose API keys to client - keep them server-side only
   },
   // Add security headers
   async headers() {

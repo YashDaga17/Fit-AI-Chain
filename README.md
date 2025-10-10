@@ -2,39 +2,237 @@
 
 **Transform your nutrition journey with AI-powered food analysis and gamified tracking!**
 
-Fit AI Chain is a cutting-edge calorie tracking application that combines artificial intelligence, blockchain-verified id## 🚀 New User Experience
+Fit AI Chain is a production-ready calorie tracking application that combines artificial intelligence, World App authentication, NeonDB PostgreSQL storage, and gamification to make nutrition tracking engaging and accurate. 
 
-### First-Time User Flow
+## ✨ Key Features
 
-1. **Landing Page**: Users arrive at the verification screen
-2. **Environment Detection**: App detects if running in World App or web browser
-3. **Verification Options**:
-   - **World App Users**: Full World ID verification with blockchain proof
-   - **Web Users**: Guest mode option for trying the app
-4. **Data Initialization**: Automatic setup of user data structure
-5. **Tracker Access**: Seamless transition to the main tracking interface
+- 🔐 **Real World App Authentication** - SIWE wallet connect, no fake verification
+- 🗄️ **NeonDB Integration** - All data persisted in PostgreSQL
+- 🏆 **Real Leaderboard** - Compete with actual users, ranked by XP
+- 📸 **AI Food Analysis** - Instant nutrition breakdown via OpenAI
+- ⚡ **XP & Leveling** - Gamified progression system
+- 📊 **Beautiful UI** - Modern, responsive design
 
-### Guest Mode Features
+## 🚀 Quick Start
 
-For users who want to try the app without World ID verification:
+**See [QUICKSTART.md](./QUICKSTART.md) for a 5-minute setup guide!**
 
-- **Temporary Access**: 7-day trial period
-- **Local Storage**: All data stays on the device
-- **Full Functionality**: Complete access to AI food analysis and XP system
-- **Easy Upgrade**: Can verify with World ID later for permanent access
-- **Data Migration**: Guest data can be preserved when upgrading
+### Prerequisites
 
-### Data Management
+- Node.js 18+
+- NeonDB account (free tier)
+- World App developer account
+- OpenAI API key
 
-The app automatically initializes:
-- **User Stats**: XP, level, streak, calories tracked
-- **Food Entries**: Empty array ready for first food log
-- **Preferences**: Theme, units, notification settings
-- **Verification Status**: Secure token with expiration handling
+### Installation
 
-### Error Handling
+```bash
+# 1. Install dependencies
+npm install
 
-- **Graceful Degradation**: App works even with missing environment variables
+# 2. Set up environment (see .env.example)
+cp .env.example .env.local
+# Edit .env.local with your credentials
+
+# 3. Set up database
+npm run db:setup
+
+# 4. Run development server
+npm run dev
+```
+
+## 📚 Documentation
+
+- **[QUICKSTART.md](./QUICKSTART.md)** - Get up and running in 5 minutes
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system architecture and design
+- **[SETUP_COMPLETE.md](./SETUP_COMPLETE.md)** - Complete feature checklist
+
+## 🌍 World App Integration
+
+### Authentication Flow
+
+1. User opens app in World App or browser
+2. Clicks "Connect Wallet"
+3. Approves SIWE signature in World App
+4. Server verifies signature
+5. User synced to database
+6. Ready to track food!
+
+To test the World App integration locally:
+
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+3. **Expose your local server** (choose one):
+   
+   **Option A: ngrok**
+   ```bash
+   ngrok http 3000
+   ```
+   
+   **Option B: cloudflared**
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+
+4. **Open in World App**:
+   - Copy the HTTPS URL from ngrok/cloudflared
+   - Open World App on your phone
+   - Navigate to the URL
+   - The app will detect World App and enable wallet connect
+
+### Why Two World App IDs?
+
+You need **TWO** World App IDs for different purposes:
+
+1. **`NEXT_PUBLIC_WORLDCOIN_APP_ID`** (Client-side)
+   - Used by MiniKit in the browser
+   - Handles wallet connection UI
+   - Must be prefixed with `NEXT_PUBLIC_` to be accessible in browser
+   
+2. **`APP_ID`** (Server-side)
+   - Used for backend verification
+   - Validates signatures and nonces
+   - Kept secret on the server
+
+**Important**: Both should point to the same World App project!
+
+## 🗄️ Database (NeonDB)
+
+### Schema
+
+```sql
+-- Users table
+users (
+  id, wallet_address, username, world_id_verified,
+  total_xp, level, created_at, updated_at
+)
+
+-- Food entries
+food_entries (
+  id, user_id, food_name, calories, protein, carbs,
+  fat, fiber, image_id, xp_earned, created_at
+)
+
+-- Images
+food_images (
+  id, user_id, data (base64/url), mime_type, created_at
+)
+
+-- Leaderboard snapshots
+leaderboard_snapshots (
+  id, user_id, rank, total_xp, snapshot_date
+)
+```
+
+### Database Scripts
+
+```bash
+# Set up database from scratch
+npm run db:setup
+
+# Open Drizzle Studio (visual DB browser)
+npm run db:studio
+
+# Push schema changes
+npm run db:push
+
+# Generate migrations
+npm run db:generate
+```
+
+## 🎮 Features
+
+### Food Tracking
+- 📸 Upload food images
+- 🤖 AI-powered nutrition analysis (OpenAI GPT-4 Vision)
+- 📊 Detailed macronutrient breakdown
+- ⚡ Instant XP rewards
+
+### Gamification
+- 🏆 XP-based leveling system
+- 🎯 Achievements and badges
+- 📈 Progress tracking
+- � Daily streaks
+
+### Leaderboard
+- 🥇 Global rankings by XP
+- 👥 Real usernames from wallet
+- 📊 Level and entry stats
+- 🎯 Your rank highlighted
+
+### UI/UX
+- 🎨 Modern, responsive design
+- 🌙 Beautiful gradients and animations
+- 📱 Mobile-first approach
+- ⚡ Fast performance
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS, shadcn/ui
+- **Authentication**: MiniKit, SIWE
+- **Database**: NeonDB (PostgreSQL), Drizzle ORM
+- **AI**: OpenAI GPT-4 Vision
+- **Deployment**: Vercel-ready
+
+## 📁 Project Structure
+
+```
+Fit-AI-Chain/
+├── src/
+│   ├── app/                 # Next.js app router
+│   │   ├── api/            # API routes
+│   │   │   ├── user/sync/  # User database sync
+│   │   │   ├── food/log/   # Log food entries
+│   │   │   ├── leaderboard-db/ # Fetch leaderboard
+│   │   │   └── images/[id]/ # Serve images
+│   │   ├── leaderboard/    # Leaderboard page
+│   │   ├── tracker/        # Food tracking page
+│   │   └── page.tsx        # Home/auth page
+│   ├── components/         # React components
+│   │   ├── WalletConnect.tsx # Auth component
+│   │   └── ui/             # shadcn components
+│   ├── lib/
+│   │   ├── db.ts           # Database connection
+│   │   ├── schema.ts       # Drizzle schema
+│   │   └── db-utils.ts     # Database utilities
+│   └── utils/              # Helper functions
+├── scripts/
+│   └── setup-db.sh         # Database setup script
+├── ARCHITECTURE.md         # System architecture docs
+├── QUICKSTART.md           # 5-minute setup guide
+└── SETUP_COMPLETE.md       # Feature checklist
+```
+
+## 🔧 Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Type check
+npm run type-check
+
+# Lint
+npm run lint
+```
 - **Recovery Systems**: Automatic cleanup of corrupted localStorage data
 - **Validation**: Input sanitization and type checking throughout
 - **Fallbacks**: Alternative flows when primary systems fail

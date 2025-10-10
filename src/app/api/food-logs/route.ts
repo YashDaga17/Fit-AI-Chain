@@ -1,96 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { upsertUser, createFoodEntry, getFoodEntriesByUsername } from '@/lib/db-utils'
 
-const userFoodLogs = new Map<string, any[]>()
-
+/**
+ * GET /api/food-logs?username=xxx
+ * Get all food logs for a user by username
+ */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get('userId')
-    const sessionToken = req.nextUrl.searchParams.get('token')
+    const username = req.nextUrl.searchParams.get('username')
     
-    if (!userId || !sessionToken) {
-      return NextResponse.json(
-        { success: false, message: "Missing userId or session token" },
-        { status: 400 }
-      )
+    if (!username) {
+      return NextResponse.json({ success: false, message: "Missing username" }, { status: 400 })
     }
     
-    const logs = userFoodLogs.get(userId) || []
+    const logs = await getFoodEntriesByUsername(username)
     
-    return NextResponse.json({
-      success: true,
-      logs: logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    })
-    
+    return NextResponse.json({ success: true, logs })
   } catch (error) {
-    console.error('Error retrieving food logs:', error)
-    return NextResponse.json(
-      { success: false, message: "Failed to retrieve food logs" },
-      { status: 500 }
-    )
+    console.error('❌ Error retrieving food logs:', error)
+    return NextResponse.json({ success: false, message: "Failed to retrieve food logs" }, { status: 500 })
   }
 }
 
+/**
+ * POST /api/food-logs
+ * Save a new food log entry
+ */
 export async function POST(req: NextRequest) {
   try {
-    const { userId, sessionToken, foodLog } = await req.json()
+    const { username, foodLog } = await req.json()
     
-    if (!userId || !sessionToken || !foodLog) {
-      return NextResponse.json(
-        { success: false, message: "Missing required fields" },
-        { status: 400 }
-      )
+    if (!username || !foodLog) {
+      return NextResponse.json({ success: false, message: "Missing username or foodLog" }, { status: 400 })
     }
     
+    // Ensure user exists
+    const user = await upsertUser(username)
     
-    const existingLogs = userFoodLogs.get(userId) || []
-    const newLog = {
-      ...foodLog,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    }
-    
-    existingLogs.push(newLog)
-    userFoodLogs.set(userId, existingLogs)
-    
-    return NextResponse.json({
-      success: true,
-      log: newLog
+    // Create food entry with proper error handling
+    const newEntry = await createFoodEntry({
+      userId: user.id,
+      username,
+      foodName: foodLog.food || 'Unknown Food',
+      calories: foodLog.calories || 0,
+      xpEarned: foodLog.xp || 0,
+      imageUrl: foodLog.image || '',
+      confidence: foodLog.confidence,
+      cuisine: foodLog.cuisine,
+      portionSize: foodLog.portionSize,
+      ingredients: foodLog.ingredients,
+      cookingMethod: foodLog.cookingMethod,
+      nutrients: foodLog.nutrients,
+      healthScore: foodLog.healthScore,
+      allergens: foodLog.allergens,
+      alternatives: foodLog.alternatives
     })
     
-  } catch (error) {
-    console.error('Error saving food log:', error)
-    return NextResponse.json(
-      { success: false, message: "Failed to save food log" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function DELETE(req: NextRequest) {
-  try {
-    const { userId, sessionToken, logId } = await req.json()
+    return NextResponse.json({ success: true, log: newEntry })
+  } catch (error: any) {
+    console.error('❌ Error saving food log:', error.message || error)
     
-    if (!userId || !sessionToken || !logId) {
-      return NextResponse.json(
-        { success: false, message: "Missing required fields" },
-        { status: 400 }
-      )
+    // Return more specific error messages
+    if (error.message?.includes('connection')) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Database connection failed. Please try again." 
+      }, { status: 503 })
     }
     
-    const existingLogs = userFoodLogs.get(userId) || []
-    const updatedLogs = existingLogs.filter(log => log.id !== logId)
-    
-    userFoodLogs.set(userId, updatedLogs)
-    
-    return NextResponse.json({
-      success: true
-    })
-    
-  } catch (error) {
-    console.error('Error deleting food log:', error)
-    return NextResponse.json(
-      { success: false, message: "Failed to delete food log" },
-      { status: 500 }
-    )
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message || "Failed to save food log" 
+    }, { status: 500 })
   }
 }
