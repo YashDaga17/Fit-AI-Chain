@@ -12,7 +12,7 @@ export default function MiniKitInitializer() {
 
     const initializeMiniKit = async () => {
       try {
-        const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID
+        const appId = process.env.NEXT_PUBLIC_WLD_APP_ID
         
         // Check if running in World App
         const isWorldApp = window.navigator.userAgent.includes('worldapp') || 

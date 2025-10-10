@@ -37,7 +37,7 @@ function VerifyCallbackContent() {
         console.log('Processing World ID verification callback...')
         
         // Send verification to backend
-        const verifyResponse = await fetch('/api/verify', {
+        const verifyResponse = await fetch('/api/world-id/verify', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

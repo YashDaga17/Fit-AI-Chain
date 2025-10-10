@@ -7,7 +7,7 @@ export function initMiniKit() {
     try {
       // Only install if MiniKit is not already installed
       if (!MiniKit.isInstalled()) {
-        const appId = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || 'app_86f9f548ff3e656a673692a02440cddf'
+        const appId = process.env.NEXT_PUBLIC_WLD_APP_ID
         console.log('Installing MiniKit with app_id:', appId)
         MiniKit.install(appId)
       } else {

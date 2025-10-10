@@ -16,7 +16,7 @@ export default function Home() {
     if (typeof window !== "undefined") {
       (window as any).clearAuth = () => {
         localStorage.removeItem("wallet_auth")
-        console.log("🧹 Auth cleared! Refresh the page.")
+        console.log(" Auth cleared! Refresh the page.")
         window.location.reload()
       }
     }
@@ -25,10 +25,9 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    // Initialize MiniKit first
     try {
-      const appId = 'app_be256001919f34e9e8409e34bb74456f'
-      if (!MiniKit.isInstalled()) {
+      const appId = process.env.NEXT_PUBLIC_WLD_APP_ID
+      if (typeof window !== "undefined" && !MiniKit.isInstalled()) {
         MiniKit.install(appId)
       }
       

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     // const reference = await getReferenceFromDB()
 
     // Verify the transaction with Developer Portal API
-    const app_id = process.env.NEXT_PUBLIC_WORLDCOIN_APP_ID || 'app_86f9f548ff3e656a673692a02440cddf'
+    const app_id = process.env.NEXT_PUBLIC_WLD_APP_ID || process.env.APP_ID
     
     const response = await fetch(
       `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transaction_id}?app_id=${app_id}`,

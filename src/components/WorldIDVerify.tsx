@@ -40,7 +40,7 @@ export default function WorldIDVerify({ onSuccess, onError }: WorldIDVerifyProps
       }
 
       // Verify the proof on your backend
-      const response = await fetch('/api/verify', {
+      const response = await fetch('/api/world-id/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
