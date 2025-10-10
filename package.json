@@ -21,7 +21,7 @@
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@types/pg": "^8.15.5",
-    "@worldcoin/minikit-js": "latest",
+    "@worldcoin/minikit-js": "^1.9.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.31.5",
