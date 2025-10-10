@@ -10,7 +10,7 @@ export const users = pgTable('users', {
   streak: integer('streak').default(1).notNull(),
   joinedAt: timestamp('joined_at').defaultNow().notNull(),
   lastActive: timestamp('last_active').defaultNow().notNull(),
-  lastStreakUpdate: timestamp('last_streak_update').defaultNow(),
+  lastStreakUpdate: timestamp('last_streak_update').defaultNow().notNull(),
 })
 
 // Food entries table - stores all food logs with images

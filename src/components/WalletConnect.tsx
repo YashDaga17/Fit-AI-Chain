@@ -16,9 +16,17 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
 
   // Check if MiniKit is available (for example, if running inside World App)
-  const isMiniKitAvailable = typeof window !== "undefined" && !!MiniKit?.commandsAsync;
+  const isMiniKitAvailable = typeof window !== "undefined" && MiniKit.isInstalled()
 
   useEffect(() => {
+    // Log MiniKit status for debugging
+    if (typeof window !== "undefined") {
+      console.log('🔍 MiniKit Debug Info:')
+      console.log('- MiniKit installed:', MiniKit.isInstalled())
+      console.log('- App ID:', process.env.NEXT_PUBLIC_WLD_APP_ID)
+      console.log('- commandsAsync available:', !!MiniKit?.commandsAsync)
+      console.log('- User:', MiniKit?.user)
+    }
     // Don't auto-connect here - let the parent page handle redirects
     // This ensures the login screen is always visible for new users
     setHasCheckedAuth(true)

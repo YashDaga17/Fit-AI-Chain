@@ -27,8 +27,21 @@ export default function Home() {
 
     try {
       const appId = process.env.NEXT_PUBLIC_WLD_APP_ID
+      console.log('🔧 Initializing MiniKit with App ID:', appId)
+      
+      if (!appId) {
+        console.error('❌ NEXT_PUBLIC_WLD_APP_ID is not defined!')
+        setIsWorldApp(false)
+        setIsInitialized(true)
+        return
+      }
+      
       if (typeof window !== "undefined" && !MiniKit.isInstalled()) {
+        console.log('📦 Installing MiniKit...')
         MiniKit.install(appId)
+        console.log('✅ MiniKit installed')
+      } else {
+        console.log('✅ MiniKit already installed')
       }
       
       const miniKitInstalled = MiniKit.isInstalled()
@@ -36,6 +49,13 @@ export default function Home() {
       const isWorldAppUA = userAgent.includes('worldapp') || userAgent.includes('minikit')
       const hasWorldBridge = typeof (window as any).WorldApp !== 'undefined'
       const inWorldApp = miniKitInstalled || isWorldAppUA || hasWorldBridge
+      
+      console.log('🌍 Environment Check:', {
+        miniKitInstalled,
+        isWorldAppUA,
+        hasWorldBridge,
+        inWorldApp
+      })
       
       setIsWorldApp(inWorldApp)
     } catch (error) {
