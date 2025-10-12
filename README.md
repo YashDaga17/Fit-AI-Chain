@@ -2,50 +2,339 @@
 
 **Transform your nutrition journey with AI-powered food analysis and gamified tracking!**
 
-Fit AI Chain is a production-ready calorie tracking application that combines artificial intelligence, World App authentication, NeonDB PostgreSQL storage, and gamification to make nutrition tracking engaging and accurate. 
+Fit AI Chain is a production-ready calorie tracking application that combines artificial intelligence, World App authentication, NeonDB PostgreSQL storage, and gamification to make nutrition tracking engaging and accurate.
 
 ## ✨ Key Features
 
-- 🔐 **Real World App Authentication** - SIWE wallet connect, no fake verification
-- 🗄️ **NeonDB Integration** - All data persisted in PostgreSQL
+- 🔐 **Real World App Authentication** - SIWE wallet connect with session management
+- 🗄️ **NeonDB Integration** - All data persisted in PostgreSQL with Drizzle ORM
 - 🏆 **Real Leaderboard** - Compete with actual users, ranked by XP
-- 📸 **AI Food Analysis** - Instant nutrition breakdown via OpenAI
+- 📸 **AI Food Analysis** - Instant nutrition breakdown via Google Gemini AI
 - ⚡ **XP & Leveling** - Gamified progression system
-- 📊 **Beautiful UI** - Modern, responsive design
+- 📊 **Beautiful UI** - Modern, responsive design with Tailwind CSS
 
-## 🚀 Quick Start
-
-**See [QUICKSTART.md](./QUICKSTART.md) for a 5-minute setup guide!**
+## 🚀 Quick Setup Guide
 
 ### Prerequisites
 
-- Node.js 18+
-- NeonDB account (free tier)
-- World App developer account
-- OpenAI API key
+Before you start, ensure you have:
 
-### Installation
+- **Node.js 18+** - [Download here](https://nodejs.org/)
+- **pnpm** (recommended) or npm - Install with `npm install -g pnpm`
+- **Git** - [Download here](https://git-scm.com/)
+
+### Required Accounts & API Keys
+
+1. **NeonDB Account** (Free tier available)
+   - Create account at [neon.tech](https://neon.tech)
+   - Create a new database project
+   - Copy the connection string
+
+2. **World App Developer Account**
+   - Sign up at [developer.worldcoin.org](https://developer.worldcoin.org)
+   - Create a new app
+   - Get your App ID
+
+3. **Google AI Studio Account** (Optional - for AI features)
+   - Get API key from [makersuite.google.com](https://makersuite.google.com/app/apikey)
+
+## 📦 Installation & Setup
+
+### 1. Clone the Repository
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Set up environment (see .env.example)
-cp .env.example .env.local
-# Edit .env.local with your credentials
-
-# 3. Set up database
-npm run db:setup
-
-# 4. Run development server
-npm run dev
+git clone <your-repo-url>
+cd Fit-AI-Chain
 ```
 
-## 📚 Documentation
+### 2. Install Dependencies
 
-- **[QUICKSTART.md](./QUICKSTART.md)** - Get up and running in 5 minutes
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system architecture and design
-- **[SETUP_COMPLETE.md](./SETUP_COMPLETE.md)** - Complete feature checklist
+```bash
+# Using pnpm (recommended)
+pnpm install
+
+# Or using npm
+npm install
+```
+
+### 3. Environment Configuration
+
+Create your environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your credentials:
+
+```bash
+# ===========================================
+# REQUIRED: World ID / MiniKit Configuration
+# ===========================================
+# Get your app ID from https://developer.worldcoin.org
+NEXT_PUBLIC_WORLDCOIN_APP_ID=app_your_app_id_here
+APP_ID=app_your_app_id_here
+
+# ===========================================
+# REQUIRED: Database Configuration
+# ===========================================
+# Get your database URL from https://neon.tech
+DATABASE_URL=postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+
+# ===========================================
+# OPTIONAL: AI Features
+# ===========================================
+# For AI food analysis (optional but recommended)
+GOOGLE_API_KEY=your_google_gemini_api_key_here
+
+# ===========================================
+# OPTIONAL: App Customization
+# ===========================================
+NEXT_PUBLIC_APP_NAME=Fit AI Chain
+NEXT_PUBLIC_APP_DESCRIPTION="Track calories with AI • Earn XP • Compete with friends"
+```
+
+### 4. Database Setup
+
+Initialize your database with the required tables:
+
+```bash
+# Set up database schema
+pnpm run db:push
+
+# OR if you want to generate migrations first
+pnpm run db:generate
+pnpm run db:push
+```
+
+### 5. Start Development Server
+
+```bash
+# Start the development server
+pnpm run dev
+
+# Server will be available at http://localhost:3000
+```
+
+## 🗄️ Database Management
+
+### Available Database Commands
+
+```bash
+# Push schema changes to database
+pnpm run db:push
+
+# Generate migration files
+pnpm run db:generate
+
+# Open Drizzle Studio (visual database browser)
+pnpm run db:studio
+
+# Reset database (⚠️ WARNING: This deletes all data!)
+node scripts/reset-database.mjs
+```
+
+### Database Schema Overview
+
+The application uses the following main tables:
+
+- **`users`** - User profiles, XP, levels, streaks
+- **`food_entries`** - Food logs with nutrition data
+- **`sessions`** - Authentication sessions
+- **`leaderboard_cache`** - Cached leaderboard data for performance
+
+## 🌍 World App Integration & Testing
+
+### Local Development with World App
+
+To test the complete World App integration:
+
+1. **Start your development server**:
+   ```bash
+   pnpm run dev
+   ```
+
+2. **Expose your local server** (choose one option):
+
+   **Option A: Using ngrok**
+   ```bash
+   # Install ngrok if you haven't
+   npm install -g ngrok
+
+   # Expose your local server
+   ngrok http 3000
+   ```
+
+   **Option B: Using cloudflared**
+   ```bash
+   # Install cloudflared
+   # Visit: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+
+   # Expose your local server
+   cloudflared tunnel --url http://localhost:3000
+   ```
+
+3. **Test in World App**:
+   - Copy the HTTPS URL from ngrok/cloudflared
+   - Open World App on your phone
+   - Navigate to the URL
+   - The app will detect World App environment and enable full features
+
+### Authentication Flow
+
+1. User opens app in World App or browser
+2. App always shows wallet connect screen (as designed)
+3. User clicks "Connect Wallet"
+4. MiniKit handles SIWE signature request
+5. Server verifies signature and creates session
+6. User data synced to database
+7. User redirected to tracker page
+
+## 🏗️ Project Structure
+
+```
+src/
+├── app/                    # Next.js 15 App Router
+│   ├── api/               # API routes
+│   │   ├── complete-siwe/ # SIWE verification
+│   │   ├── nonce/         # Authentication nonces
+│   │   ├── user/          # User management
+│   │   └── food-logs/     # Food entry endpoints
+│   ├── dashboard/         # Dashboard page
+│   ├── leaderboard/       # Leaderboard page
+│   ├── tracker/           # Main food tracking page
+│   └── layout.tsx         # Root layout with MiniKit
+├── components/            # Reusable UI components
+│   ├── ui/               # Shadcn/ui components
+│   ├── WalletConnect.tsx # Wallet connection component
+│   └── MiniKitProvider.tsx
+├── hooks/                # Custom React hooks
+│   ├── useAuth.ts        # Authentication logic
+│   ├── useFoodAnalysis.ts # Food AI analysis
+│   └── useUserStats.ts   # User statistics
+├── lib/                  # Utility libraries
+│   ├── db/              # Database configuration
+│   │   ├── queries.ts   # Database queries
+│   │   └── schema.ts    # Drizzle schema
+│   ├── minikit.ts       # MiniKit utilities
+│   └── utils.ts         # General utilities
+└── utils/               # App-specific utilities
+    ├── levelingSystem.ts # XP and leveling logic
+    ├── nutritionUtils.ts # Nutrition calculations
+    └── commonFoods.ts   # Food database
+```
+
+## 🔧 Available Scripts
+
+```bash
+# Development
+pnpm run dev          # Start development server with Turbopack
+pnpm run build        # Build for production
+pnpm run start        # Start production server
+pnpm run lint         # Run ESLint
+pnpm run type-check   # Run TypeScript type checking
+
+# Database Management
+pnpm run db:setup     # Initial database setup
+pnpm run db:studio    # Open Drizzle Studio
+pnpm run db:push      # Push schema changes
+pnpm run db:generate  # Generate migrations
+```
+
+## 🚀 Deployment
+
+### Vercel Deployment (Recommended)
+
+1. **Push your code to GitHub**
+
+2. **Deploy to Vercel**:
+   - Connect your GitHub repo to Vercel
+   - Add environment variables in Vercel dashboard
+   - Deploy automatically
+
+3. **Environment Variables on Vercel**:
+   ```
+   NEXT_PUBLIC_WORLDCOIN_APP_ID=app_your_app_id_here
+   APP_ID=app_your_app_id_here
+   DATABASE_URL=postgresql://...
+   GOOGLE_API_KEY=your_google_api_key
+   ```
+
+### Other Hosting Platforms
+
+The app is a standard Next.js application and can be deployed to:
+- Netlify
+- Railway
+- Digital Ocean
+- AWS
+- Google Cloud Platform
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. "MiniKit is not installed" Error**
+- Ensure you're using the correct MiniKit script version (0.0.77)
+- Check that `NEXT_PUBLIC_WORLDCOIN_APP_ID` is set correctly
+- Make sure you're testing in World App for full functionality
+
+**2. Database Connection Issues**
+- Verify your `DATABASE_URL` is correct
+- Ensure your NeonDB instance is active
+- Check that your IP is whitelisted in NeonDB (if applicable)
+
+**3. Authentication Not Working**
+- Verify both `NEXT_PUBLIC_WORLDCOIN_APP_ID` and `APP_ID` are set
+- Ensure they point to the same World App project
+- Check that your World App has the correct redirect URLs
+
+**4. AI Features Not Working**
+- Verify your `GOOGLE_API_KEY` is valid
+- Check API quotas in Google AI Studio
+- Ensure the Gemini API is enabled
+
+### Debug Mode
+
+Enable debug logging by setting:
+```bash
+NODE_ENV=development
+```
+
+## 📚 Additional Documentation
+
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Detailed setup instructions
+- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Technical implementation details
+- **[DEBUG_GUIDE.md](./DEBUG_GUIDE.md)** - Debugging and troubleshooting
+- **[VERIFICATION_CHECKLIST.md](./VERIFICATION_CHECKLIST.md)** - Feature verification checklist
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🆘 Support
+
+If you run into any issues:
+
+1. Check the troubleshooting section above
+2. Review the debug guide: [DEBUG_GUIDE.md](./DEBUG_GUIDE.md)
+3. Open an issue on GitHub with:
+   - Error message
+   - Steps to reproduce
+   - Environment details (Node version, OS, etc.)
+
+---
+
+**Built with ❤️ for the World App ecosystem**
 
 ## 🌍 World App Integration
 

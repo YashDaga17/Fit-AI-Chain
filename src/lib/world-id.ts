@@ -74,7 +74,7 @@ export async function verifyWorldIDAction(options: VerifyOptions): Promise<boole
 export async function verifyHuman(): Promise<boolean> {
   return verifyWorldIDAction({
     action: 'verify-human',
-    verificationLevel: VerificationLevel.Orb, // Highest level for human verification
+    verificationLevel: VerificationLevel.Device, // Highest level for human verification
   })
 }
 

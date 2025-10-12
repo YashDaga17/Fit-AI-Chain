@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { Suspense } from "react";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import { Analytics } from "@vercel/analytics/react";
 import Script from "next/script";
+import { Suspense } from "react";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: 'swap',
-  variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
   title: "Fit AI Chain - AI-Powered Calorie Tracker",
@@ -67,34 +63,23 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
-  viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f97316" },
-    { media: "(prefers-color-scheme: dark)", color: "#ea580c" },
-  ],
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
       <head>
         <Script
-          src="https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@1.0.0/dist/minikit.js"
+          src="https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@0.0.77/dist/minikit.js"
           strategy="beforeInteractive"
         />
       </head>
-      <body className={`font-sans ${inter.variable}`}>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Suspense fallback={null}>{children}</Suspense>
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }

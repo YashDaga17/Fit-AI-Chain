@@ -32,7 +32,7 @@ export function useWorldIDActions(): UseWorldIDActionsReturn {
       const { finalPayload } = await MiniKit.commandsAsync.verify({
         action: action,
         signal: signal || '',
-        verification_level: VerificationLevel.Orb, // Highest security
+        verification_level: VerificationLevel.Device, // Highest security
       })
 
       if (finalPayload.status === 'error') {

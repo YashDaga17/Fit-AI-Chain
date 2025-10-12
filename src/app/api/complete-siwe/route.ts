@@ -45,10 +45,11 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
     
-    // Return success - we don't return address, frontend gets username from MiniKit
+    // Return success with address for frontend use
     return NextResponse.json({
       status: 'success',
       isValid: true,
+      address: payload.address,
     })
   } catch (error: any) {
     console.error('SIWE verification error:', error)

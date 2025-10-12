@@ -31,7 +31,7 @@ export default function WorldIDVerify({ onSuccess, onError }: WorldIDVerifyProps
       // Trigger World ID verification
       const { finalPayload } = await MiniKit.commandsAsync.verify({
         action: 'verify-human-fitaichain', // This should match your Developer Portal action
-        verification_level: VerificationLevel.Orb, // or VerificationLevel.Device
+        verification_level: VerificationLevel.Device, // or VerificationLevel.Device
         signal: '', // Optional: can add user-specific data
       })
 
