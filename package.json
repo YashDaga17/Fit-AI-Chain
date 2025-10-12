@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "setup": "bash scripts/setup.sh",
     "db:setup": "bash scripts/setup-db.sh",
     "db:studio": "dotenv -e .env.local -- npx drizzle-kit studio",
     "db:push": "dotenv -e .env.local -- npx drizzle-kit push",
-    "db:generate": "dotenv -e .env.local -- npx drizzle-kit generate"
+    "db:generate": "dotenv -e .env.local -- npx drizzle-kit generate",
+    "db:test": "node scripts/test-db-connection.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
