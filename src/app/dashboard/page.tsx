@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
+import { useAuth } from '@/hooks/useAuth'
+import { useUserStats } from '@/hooks/useUserStats'
+import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
 
 interface UserStats {
   totalCalories: number
@@ -27,92 +30,53 @@ interface LeaderboardEntry {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [userStats, setUserStats] = useState<UserStats>({
-    totalCalories: 0,
-    totalXP: 0,
-    streak: 1,
-    level: 1,
-    rank: 0,
-    username: ''
-  })
+  const { isAuthenticated, username } = useAuth()
+  const { userStats, leaderboard, loading } = useUserStats(username)
+  const { getFoodEntries } = useFoodAnalysis()
   const [todayCalories, setTodayCalories] = useState(0)
   const [weeklyCalories, setWeeklyCalories] = useState(0)
-  const [topUsers, setTopUsers] = useState<LeaderboardEntry[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (!isAuthenticated || !username) {
+      router.push('/')
+      return
+    }
 
-  const loadDashboardData = async () => {
+    loadCalorieData()
+  }, [isAuthenticated, username, router])
+
+  const loadCalorieData = async () => {
+    if (!username) return
+
     try {
-      // Get username from localStorage
-      const authData = localStorage.getItem('wallet_auth')
-      if (!authData) {
-        router.push('/')
-        return
-      }
-
-      const { username } = JSON.parse(authData)
+      const entries = await getFoodEntries(username)
       
-      // Fetch user stats from database
-      const userResponse = await fetch(`/api/user?username=${username}`)
-      if (userResponse.ok) {
-        const userData = await userResponse.json()
-        const userLevel = getUserLevel(userData.totalXP || 0)
-        
-        setUserStats({
-          totalCalories: userData.totalCalories || 0,
-          totalXP: userData.totalXP || 0,
-          streak: userData.streak || 1,
-          level: userLevel.level,
-          rank: userData.rank || 0,
-          username: username
-        })
-      }
-
-      // Fetch food logs to calculate today's and weekly calories
-      const logsResponse = await fetch(`/api/food-logs?username=${username}`)
-      if (logsResponse.ok) {
-        const logs = await logsResponse.json()
-        
-        const now = new Date()
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).getTime()
-        
-        let todayCals = 0
-        let weeklyCals = 0
-        
-        logs.forEach((log: any) => {
-          const logTime = new Date(log.timestamp).getTime()
-          if (logTime >= todayStart) {
-            todayCals += log.calories || 0
-          }
-          if (logTime >= weekStart) {
-            weeklyCals += log.calories || 0
-          }
-        })
-        
-        setTodayCalories(todayCals)
-        setWeeklyCalories(weeklyCals)
-      }
-
-      // Fetch leaderboard
-      const leaderboardResponse = await fetch('/api/leaderboard-db')
-      if (leaderboardResponse.ok) {
-        const leaderboardData = await leaderboardResponse.json()
-        setTopUsers(leaderboardData.slice(0, 3))
-      }
-
-      setLoading(false)
+      const now = new Date()
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).getTime()
+      
+      let todayCals = 0
+      let weeklyCals = 0
+      
+      entries.forEach((entry: any) => {
+        const logTime = new Date(entry.timestamp).getTime()
+        if (logTime >= todayStart) {
+          todayCals += entry.calories || 0
+        }
+        if (logTime >= weekStart) {
+          weeklyCals += entry.calories || 0
+        }
+      })
+      
+      setTodayCalories(todayCals)
+      setWeeklyCalories(weeklyCals)
     } catch (error) {
-      console.error('Failed to load dashboard data:', error)
-      setLoading(false)
+      // Handle error silently
     }
   }
 
-  const levelInfo = getUserLevel(userStats.totalXP)
-  const progress = getXPProgress(userStats.totalXP)
+  const levelInfo = userStats ? getUserLevel(userStats.totalXP) : { level: 1, title: 'Beginner', badge: '🥉' }
+  const progress = userStats ? getXPProgress(userStats.totalXP) : { progressXP: 0, neededXP: 500, progressPercentage: 0 }
 
   if (loading) {
     return (
@@ -132,7 +96,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">Welcome back! 👋</h1>
-            <p className="text-white/90">@{userStats.username}</p>
+            <p className="text-white/90">@{userStats?.username || 'User'}</p>
           </div>
           <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
             <Star className="w-8 h-8" />
@@ -172,7 +136,7 @@ export default function DashboardPage() {
                 <Zap className="w-8 h-8 text-purple-600" />
                 <Badge variant="secondary" className="bg-purple-200 text-purple-800">Total</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{userStats.totalXP.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-gray-900">{(userStats?.totalXP || 0).toLocaleString()}</p>
               <p className="text-sm text-gray-600">XP Earned</p>
             </CardContent>
           </Card>
@@ -184,7 +148,7 @@ export default function DashboardPage() {
                 <Target className="w-8 h-8 text-red-600" />
                 <Badge variant="secondary" className="bg-red-200 text-red-800">Streak</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{userStats.streak}</p>
+              <p className="text-3xl font-bold text-gray-900">{userStats?.streak || 1}</p>
               <p className="text-sm text-gray-600">Days</p>
             </CardContent>
           </Card>
@@ -196,7 +160,7 @@ export default function DashboardPage() {
                 <Trophy className="w-8 h-8 text-yellow-600" />
                 <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">Rank</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">#{userStats.rank || '---'}</p>
+              <p className="text-3xl font-bold text-gray-900">#{userStats?.rank || '---'}</p>
               <p className="text-sm text-gray-600">Global</p>
             </CardContent>
           </Card>
@@ -240,7 +204,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {topUsers.map((user, index) => (
+              {leaderboard.slice(0, 3).map((user, index) => (
                 <div key={user.username} className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
                     index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-600'

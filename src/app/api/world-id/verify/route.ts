@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
 
     const app_id = process.env.NEXT_PUBLIC_WLD_APP_ID || process.env.APP_ID
     if (!app_id) {
-      console.error('World ID App ID not configured')
       return NextResponse.json(
         { success: false, message: 'World ID not configured' },
         { status: 500 }
@@ -54,7 +53,6 @@ export async function POST(req: NextRequest) {
       )
     }
   } catch (error: any) {
-    console.error('World ID verification error:', error)
     return NextResponse.json(
       {
         success: false,

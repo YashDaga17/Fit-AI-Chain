@@ -5,13 +5,9 @@ import { MiniKit } from '@worldcoin/minikit-js'
 export function initMiniKit() {
   if (typeof window !== 'undefined') {
     try {
-      // Only install if MiniKit is not already installed
       if (!MiniKit.isInstalled()) {
         const appId = process.env.NEXT_PUBLIC_WLD_APP_ID
-        console.log('Installing MiniKit with app_id:', appId)
         MiniKit.install(appId)
-      } else {
-        console.log('MiniKit is already installed')
       }
     } catch (error) {
       console.error('Error initializing MiniKit:', error)
@@ -26,7 +22,6 @@ export function isMiniKitAvailable(): boolean {
   try {
     return MiniKit.isInstalled()
   } catch (error) {
-    console.error('Error checking MiniKit availability:', error)
     return false
   }
 }

@@ -25,7 +25,13 @@ export enum HapticType {
  * Only works in World App - gracefully fails in browser
  */
 export const sendHaptic = (type: HapticType) => {
-  if (!MiniKit.isInstalled()) return
+  if (typeof window === 'undefined') return
+  
+  try {
+    if (!MiniKit.isInstalled()) return
+  } catch {
+    return
+  }
 
   const [hapticType, style] = type.split('.') as [string, string | undefined]
   

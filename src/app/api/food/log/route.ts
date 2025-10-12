@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createFoodEntry, getUserByUsername, getFoodEntriesByUsername } from '@/lib/db-utils'
+import type { FoodEntry } from '@/lib/db/schema'
 
 /**
  * POST /api/food/log
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      entries: entries.map((entry) => ({
+      entries: entries.map((entry: FoodEntry) => ({
         id: entry.id,
         foodName: entry.foodName,
         calories: entry.calories,

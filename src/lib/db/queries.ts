@@ -158,7 +158,7 @@ export async function getLeaderboard(timeframe: 'daily' | 'weekly' | 'monthly' |
       .orderBy(desc(sql`SUM(${foodEntries.xpEarned})`))
       .limit(limit)
 
-    return results.map((entry, index) => ({
+    return results.map((entry: any, index: number) => ({
       rank: index + 1,
       ...entry,
     }))
@@ -177,7 +177,7 @@ export async function getLeaderboard(timeframe: 'daily' | 'weekly' | 'monthly' |
     .orderBy(desc(users.totalXP))
     .limit(limit)
 
-  return results.map((entry, index) => ({
+  return results.map((entry: any, index: number) => ({
     rank: index + 1,
     ...entry,
   }))

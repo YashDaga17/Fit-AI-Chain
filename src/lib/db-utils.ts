@@ -1,15 +1,25 @@
-import { db } from './db'
+import { db, isDatabaseConnected } from './db'
 import { users, foodEntries } from './db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
 
-/**
- * User Management Functions
- */
 
-/**
- * Create or get user by username
- */
 export async function upsertUser(username: string) {
+  if (!isDatabaseConnected || !db) {
+    // Return mock user data for development
+    return {
+      id: 1,
+      username,
+      totalXP: 0,
+      totalCalories: 0,
+      level: 1,
+      streak: 1,
+      joinedAt: new Date(),
+      lastActive: new Date(),
+      lastStreakUpdate: new Date(),
+      totalEntries: 0,
+    }
+  }
+
   try {
     // Check if user exists
     const existingUser = await db
@@ -50,7 +60,6 @@ export async function upsertUser(username: string) {
       totalEntries: 0,
     }
   } catch (error) {
-    console.error('Error upserting user:', error)
     throw error
   }
 }
@@ -78,7 +87,6 @@ export async function getUserByUsername(username: string) {
       totalEntries: entryCount?.count || 0,
     }
   } catch (error) {
-    console.error('Error getting user:', error)
     throw error
   }
 }
@@ -104,7 +112,6 @@ export async function updateUserStats(
 
     return updatedUser
   } catch (error) {
-    console.error('Error updating user stats:', error)
     throw error
   }
 }
@@ -135,6 +142,16 @@ export async function createFoodEntry(entry: {
   alternatives?: string
   mealType?: string
 }) {
+  if (!isDatabaseConnected || !db) {
+    // Return mock entry for development
+    return {
+      id: Date.now(),
+      ...entry,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  }
+
   try {
     const [newEntry] = await db.insert(foodEntries).values(entry).returning()
 
@@ -150,7 +167,6 @@ export async function createFoodEntry(entry: {
 
     return newEntry
   } catch (error) {
-    console.error('Error creating food entry:', error)
     throw error
   }
 }
@@ -163,6 +179,11 @@ export async function getFoodEntriesByUsername(
   limit: number = 50,
   offset: number = 0
 ) {
+  if (!isDatabaseConnected || !db) {
+    // Return empty array for development
+    return []
+  }
+
   try {
     const entries = await db
       .select()
@@ -174,7 +195,6 @@ export async function getFoodEntriesByUsername(
 
     return entries
   } catch (error) {
-    console.error('Error getting food entries:', error)
     throw error
   }
 }
@@ -187,6 +207,11 @@ export async function getFoodEntriesByUsername(
  * Get global leaderboard
  */
 export async function getLeaderboard(limit: number = 100) {
+  if (!isDatabaseConnected || !db) {
+    // Return empty leaderboard for development
+    return []
+  }
+
   try {
     const leaderboard = await db
       .select({
@@ -201,13 +226,28 @@ export async function getLeaderboard(limit: number = 100) {
       .orderBy(desc(users.totalXP))
       .limit(limit)
 
+    // Get total entries for each user
+    const leaderboardWithEntries = await Promise.all(
+      leaderboard.map(async (entry: typeof leaderboard[0]) => {
+        const [entryCount] = await db
+          .select({ count: sql<number>`cast(count(*) as integer)` })
+          .from(foodEntries)
+          .where(eq(foodEntries.username, entry.username))
+
+        return {
+          ...entry,
+          totalEntries: entryCount.count || 0,
+          rank: 0, // Will be set below
+        }
+      })
+    )
+
     // Add rank
-    return leaderboard.map((entry, index) => ({
+    return leaderboardWithEntries.map((entry, index) => ({
       ...entry,
       rank: index + 1,
     }))
   } catch (error) {
-    console.error('Error getting leaderboard:', error)
     throw error
   }
 }
@@ -228,7 +268,6 @@ export async function getUserRank(username: string) {
 
     return { rank: Number(result.rows[0]?.rank || 0) }
   } catch (error) {
-    console.error('Error getting user rank:', error)
     throw error
   }
 }
@@ -270,7 +309,6 @@ export async function getUserStats(username: string) {
       xpProgress,
     }
   } catch (error) {
-    console.error('Error getting user stats:', error)
     throw error
   }
 }

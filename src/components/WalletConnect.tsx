@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { MiniKit } from "@worldcoin/minikit-js"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -16,19 +16,16 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
 
   // Check if MiniKit is available (for example, if running inside World App)
-  const isMiniKitAvailable = typeof window !== "undefined" && MiniKit.isInstalled()
+  const isMiniKitAvailable = useMemo(() => {
+    if (typeof window === "undefined") return false
+    try {
+      return MiniKit.isInstalled()
+    } catch {
+      return false
+    }
+  }, [])
 
   useEffect(() => {
-    // Log MiniKit status for debugging
-    if (typeof window !== "undefined") {
-      console.log('🔍 MiniKit Debug Info:')
-      console.log('- MiniKit installed:', MiniKit.isInstalled())
-      console.log('- App ID:', process.env.NEXT_PUBLIC_WLD_APP_ID)
-      console.log('- commandsAsync available:', !!MiniKit?.commandsAsync)
-      console.log('- User:', MiniKit?.user)
-    }
-    // Don't auto-connect here - let the parent page handle redirects
-    // This ensures the login screen is always visible for new users
     setHasCheckedAuth(true)
   }, [])
 
@@ -38,32 +35,28 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       return
     }
 
-    console.log('🔐 Starting wallet connect flow...')
     setIsConnecting(true)
     setError(null)
 
     try {
-      console.log('📡 Fetching nonce...')
+      // Get nonce
       const res = await fetch("/api/nonce")
       if (!res.ok) throw new Error('Failed to get nonce')
       
       const { nonce } = await res.json()
-      console.log('✅ Nonce received')
 
-      console.log('🌍 Requesting wallet auth from MiniKit...')
+      // Request wallet auth
       const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
         nonce,
         expirationTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
         statement: "Sign in to Fit AI Chain to track your fitness journey",
       })
 
-      console.log('📦 Received payload status:', finalPayload.status)
-
       if (finalPayload.status === "error") {
         throw new Error(finalPayload.error_code || "Authentication failed")
       }
 
-      console.log('✍️ Completing SIWE...')
+      // Complete SIWE
       const response = await fetch("/api/complete-siwe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,17 +66,14 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       if (!response.ok) throw new Error('SIWE verification failed')
       
       const result = await response.json()
-      console.log('🔍 SIWE result:', result)
 
       if (result.isValid) {
         const username = MiniKit.user?.username || result.address?.substring(0, 8)
-        console.log('🎉 Auth successful! Username:', username)
         onConnect(result.address, username)
       } else {
         throw new Error("Verification failed")
       }
     } catch (err: any) {
-      console.error('❌ Connect error:', err)
       setError(err.message || "Connection failed. Please try again.")
     } finally {
       setIsConnecting(false)
@@ -107,6 +97,7 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Welcome to Fit AI Chain! 🎯</h2>
           <p className="mt-2 text-gray-600">Connect your wallet to start tracking your fitness journey</p>
+          <p className="mt-1 text-sm text-gray-500">🔒 Secure authentication required for each session</p>
         </div>
 
         {!isMiniKitAvailable ? (
@@ -123,6 +114,15 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
                   <li>Go to Mini Apps</li>
                   <li>Add this app or scan the QR code</li>
                 </ol>
+                <div className="mt-3 p-2 bg-orange-100 rounded text-xs text-orange-800">
+                  <strong>Debug Info:</strong> MiniKit installed: {(() => {
+                    try {
+                      return MiniKit.isInstalled() ? 'Yes' : 'No'
+                    } catch {
+                      return 'No (Error)'
+                    }
+                  })()}
+                </div>
               </div>
             </div>
             
@@ -131,7 +131,6 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
               onClick={() => {
                 const testAddress = "0x" + Math.random().toString(16).substr(2, 40)
                 const testUsername = "dev_user_" + Date.now()
-                console.log('🧪 Dev mode: simulating connection')
                 onConnect(testAddress, testUsername)
               }}
               variant="outline"
@@ -139,6 +138,19 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
               className="w-full"
             >
               🧪 Dev Mode: Skip (Testing Only)
+            </Button>
+            
+            {/* Force World App mode for testing */}
+            <Button
+              onClick={() => {
+                // Force enable World App mode for testing
+                window.location.reload()
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              🔄 Force Refresh Detection
             </Button>
           </div>
         ) : (

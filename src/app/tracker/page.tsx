@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, Trophy, Zap, TrendingUp, Star, Award, Loader2, Heart, Target, Flame, BarChart3, AlertTriangle, Lightbulb, User, Activity, House, Clock, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getUserLevel, getXPProgress, calculateStreakMultiplier, getAchievements, FOOD_TRACKING_LEVELS } from '@/utils/levelingSystem'
-import { loadUserDataSafely, saveUserDataSafely, initializeNewUserData } from '@/utils/userDataManager'
+import { useAuth } from '@/hooks/useAuth'
+import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
+import { useUserStats } from '@/hooks/useUserStats'
 
 interface FoodEntry {
   id: string
@@ -45,237 +47,56 @@ interface UserStats {
 
 export default function TrackerPage() {
   const router = useRouter()
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const { isAuthenticated, username } = useAuth()
+  const { isAnalyzing, error: analysisError, analyzeFood, getFoodEntries, clearError } = useFoodAnalysis()
+  const { userStats, refreshData } = useUserStats(username)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([])
-  const [userStats, setUserStats] = useState<UserStats>({
-    totalCalories: 0,
-    totalXP: 0,
-    streak: 1,
-    level: 1,
-    rank: 1
-  })
   const [mounted, setMounted] = useState(false)
 
-  // Prevent hydration mismatch by ensuring client-side only rendering for dynamic content
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    // Check if user is verified
-    const userData = loadUserDataSafely()
-    if (!userData.verification || !userData.verification.verified) {
+    if (!isAuthenticated || !username) {
       router.push('/')
       return
     }
 
-    // Validate verification and check expiry
+    loadFoodEntries()
+  }, [isAuthenticated, username, router])
+
+  const loadFoodEntries = useCallback(async () => {
+    if (!username) return
+
     try {
-      const verification = userData.verification
-      const now = Date.now()
-      
-      if (!verification.verified || (verification.expiresAt && now > verification.expiresAt)) {
-        console.log('Verification expired or invalid, redirecting to home')
-        router.push('/')
-        return
-      }
+      const entries = await getFoodEntries(username)
+      setFoodEntries(entries)
     } catch (error) {
-      console.error('Error parsing verification data:', error)
-      router.push('/')
-      return
+      // Handle error silently or show user-friendly message
     }
+  }, [username, getFoodEntries])
 
-    // Initialize data for new users
-    initializeUserData()
-    
-    // Load saved data with proper null checks and defaults
-    loadUserData()
-  }, [router])
-
-  const initializeUserData = () => {
-    try {
-      const userData = loadUserDataSafely()
-      
-      // If no data exists, initialize defaults
-      if (!userData.stats && !userData.preferences && userData.entries.length === 0) {
-        const defaultData = initializeNewUserData()
-        saveUserDataSafely({
-          stats: defaultData.stats,
-          preferences: defaultData.preferences,
-          entries: defaultData.entries
-        })
-        setUserStats(defaultData.stats)
-        setFoodEntries(defaultData.entries)
-        console.log('Initialized new user data in tracker')
-      }
-    } catch (error) {
-      console.error('Error initializing user data:', error)
-    }
-  }
-
-  const loadUserData = () => {
-    try {
-      const userData = loadUserDataSafely()
-      
-      // Load or initialize stats
-      if (userData.stats) {
-        setUserStats(userData.stats)
-      } else {
-        const defaultData = initializeNewUserData()
-        setUserStats(defaultData.stats)
-        saveUserDataSafely({ stats: defaultData.stats })
-      }
-      
-      // Load entries
-      setFoodEntries(userData.entries)
-      
-    } catch (error) {
-      console.error('Error loading user data:', error)
-      // Fallback to defaults
-      const defaultData = initializeNewUserData()
-      setUserStats(defaultData.stats)
-      setFoodEntries(defaultData.entries)
-    }
-  }
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const imageData = e.target?.result as string
-        analyzeFood(imageData)
+        setSelectedImage(imageData)
+        
+        const newEntry = await analyzeFood(imageData)
+        if (newEntry) {
+          setFoodEntries(prev => [newEntry, ...prev])
+          refreshData() // Refresh user stats
+          setSelectedImage(null)
+        }
       }
       reader.readAsDataURL(file)
     }
-  }
+  }, [analyzeFood, refreshData])
 
-  const analyzeFood = async (imageData: string) => {
-    setIsAnalyzing(true)
-    
-    try {
-      // Get username from auth
-      const walletAuth = localStorage.getItem('wallet_auth')
-      if (!walletAuth) {
-        router.push('/')
-        return
-      }
-      
-      const authData = JSON.parse(walletAuth)
-      const username = authData.username
-      
-      if (!username) {
-        router.push('/')
-        return
-      }
-
-      // Step 1: Analyze food with AI
-      const analyzeResponse = await fetch('/api/analyze-food', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          image: imageData,
-          userId: username
-        }),
-      })
-
-      if (!analyzeResponse.ok) {
-        throw new Error('Failed to analyze food')
-      }
-
-      const result = await analyzeResponse.json()
-      
-      if (result.success) {
-        // Apply streak multiplier to XP
-        const streakMultiplier = calculateStreakMultiplier(userStats.streak || 1)
-        const finalXP = Math.floor(result.xp * streakMultiplier)
-        
-        const newEntry: FoodEntry = {
-          id: Date.now().toString(),
-          image: imageData,
-          food: result.food,
-          calories: result.calories,
-          timestamp: Date.now(),
-          xp: finalXP,
-          confidence: result.confidence,
-          cuisine: result.cuisine,
-          portionSize: result.portionSize,
-          ingredients: result.ingredients,
-          cookingMethod: result.cookingMethod,
-          nutrients: result.nutrients,
-          healthScore: result.healthScore,
-          allergens: result.allergens,
-          alternatives: result.alternatives
-        }
-
-        const updatedEntries = [newEntry, ...foodEntries]
-        const newTotalXP = (userStats.totalXP || 0) + finalXP
-        
-        // Get new level information
-        const levelInfo = getUserLevel(newTotalXP)
-        
-        const newStats = {
-          ...userStats,
-          totalCalories: (userStats.totalCalories || 0) + result.calories,
-          totalXP: newTotalXP,
-          level: levelInfo.level,
-          streak: (userStats.streak || 1) + 1
-        }
-
-        setFoodEntries(updatedEntries)
-        setUserStats(newStats)
-        
-        // Step 2: Save to database
-        try {
-          const dbResponse = await fetch('/api/food-logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username,
-              foodLog: newEntry
-            })
-          })
-          
-          if (dbResponse.ok) {
-            console.log('✅ Food entry saved to database')
-          } else {
-            const error = await dbResponse.json()
-            console.error('Failed to save to database:', error.message)
-          }
-        } catch (dbError) {
-          console.error('Database error:', dbError)
-          // Continue even if DB save fails - data is in localStorage
-        }
-        
-        // Save to localStorage (limit to last 10 entries to avoid quota issues)
-        // Don't store images in localStorage - they'll be fetched from API if needed
-        const entriesToSave = updatedEntries.slice(0, 10).map(entry => ({
-          ...entry,
-          image: '' // Remove base64 image data to save space
-        }))
-        
-        try {
-          localStorage.setItem('food_entries', JSON.stringify(entriesToSave))
-          localStorage.setItem('user_stats', JSON.stringify(newStats))
-        } catch (e) {
-          console.warn('localStorage quota exceeded, clearing old entries')
-          // Clear old entries if quota exceeded
-          localStorage.removeItem('food_entries')
-          localStorage.setItem('food_entries', JSON.stringify(entriesToSave.slice(0, 5)))
-          localStorage.setItem('user_stats', JSON.stringify(newStats))
-        }
-        
-        setSelectedImage(null)
-      }
-    } catch (error) {
-      console.error('Error analyzing food:', error)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
 
   const todaysCalories = foodEntries
     .filter(entry => {
@@ -289,15 +110,15 @@ export default function TrackerPage() {
     }, 0)
 
   // Get level information for display (only after mounting)
-  const levelInfo = mounted ? getUserLevel(userStats.totalXP || 0) : FOOD_TRACKING_LEVELS[0]
-  const xpProgress = mounted ? getXPProgress(userStats.totalXP || 0) : {
+  const levelInfo = mounted && userStats ? getUserLevel(userStats.totalXP || 0) : FOOD_TRACKING_LEVELS[0]
+  const xpProgress = mounted && userStats ? getXPProgress(userStats.totalXP || 0) : {
     currentLevel: FOOD_TRACKING_LEVELS[0],
     nextLevel: FOOD_TRACKING_LEVELS[1],
     progressXP: 0,
     neededXP: 500,
     progressPercentage: 0
   }
-  const achievements = mounted ? getAchievements(userStats.totalXP || 0, userStats.streak || 1, foodEntries.length) : []
+  const achievements = mounted && userStats ? getAchievements(userStats.totalXP || 0, userStats.streak || 1, foodEntries.length) : []
 
   if (!mounted) {
     return (
@@ -334,7 +155,7 @@ export default function TrackerPage() {
             
             <div className="flex items-center space-x-3">
               <div className="text-right">
-                <div className="text-sm font-semibold text-gray-900">{(userStats.totalXP || 0).toLocaleString()}</div>
+                <div className="text-sm font-semibold text-gray-900">{(userStats?.totalXP || 0).toLocaleString()}</div>
                 <div className="text-xs text-gray-500">XP</div>
               </div>
               <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-red-100 rounded-xl flex items-center justify-center">
@@ -371,7 +192,7 @@ export default function TrackerPage() {
               </div>
               <div className="bg-white/70 rounded-2xl p-4 text-center">
                 <div className="text-2xl font-bold text-red-600 mb-1">
-                  {userStats.streak || 1}
+                  {userStats?.streak || 1}
                 </div>
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Day Streak</div>
                 <div className="text-xs text-gray-400 mt-1 flex items-center justify-center">
@@ -395,6 +216,26 @@ export default function TrackerPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Error Display */}
+        {analysisError && (
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <p className="text-red-700">{analysisError}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={clearError}
+                  className="ml-auto"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Camera Upload Card */}
         <Card className="bg-gradient-to-br from-orange-500 to-red-600 border-0 shadow-xl rounded-3xl overflow-hidden text-white">

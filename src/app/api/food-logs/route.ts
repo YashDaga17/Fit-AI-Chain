@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({ success: true, logs })
   } catch (error) {
-    console.error('❌ Error retrieving food logs:', error)
     return NextResponse.json({ success: false, message: "Failed to retrieve food logs" }, { status: 500 })
   }
 }
@@ -58,8 +57,6 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json({ success: true, log: newEntry })
   } catch (error: any) {
-    console.error('❌ Error saving food log:', error.message || error)
-    
     // Return more specific error messages
     if (error.message?.includes('connection')) {
       return NextResponse.json({ 

@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Set explicit root directory for turbopack
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     domains: ['localhost', 'api.qrserver.com'],
   },

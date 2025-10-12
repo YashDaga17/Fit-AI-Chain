@@ -6,6 +6,8 @@ import { ArrowLeft, Trophy, Medal, Award, Loader2, House, TrendingUp, Activity, 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/useAuth'
+import { useUserStats } from '@/hooks/useUserStats'
 
 interface LeaderboardEntry {
   rank: number
@@ -13,67 +15,22 @@ interface LeaderboardEntry {
   totalXP: number
   level: number
   totalCalories: number
-  totalEntries: number
+  totalEntries: number  // Now required since API provides this
   joinedAt: string
 }
 
 export default function LeaderboardPage() {
   const router = useRouter()
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentUsername, setCurrentUsername] = useState<string | null>(null)
+  const { isAuthenticated, username } = useAuth()
+  const { leaderboard, loading, error } = useUserStats(username)
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'alltime'>('alltime')
-  const [userRank, setUserRank] = useState<number | null>(null)
 
   useEffect(() => {
-    // Check authentication
-    const walletAuth = localStorage.getItem('wallet_auth')
-    
-    if (!walletAuth) {
+    if (!isAuthenticated || !username) {
       router.push('/')
       return
     }
-
-    try {
-      const auth = JSON.parse(walletAuth)
-      setCurrentUsername(auth.username)
-    } catch (error) {
-      router.push('/')
-      return
-    }
-    
-    fetchLeaderboard()
-  }, [router, timeframe])
-
-  const fetchLeaderboard = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/leaderboard-db?limit=100&timeframe=${timeframe}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard')
-      }
-
-      const data = await response.json()
-      setLeaderboard(data.leaderboard || [])
-      
-      // Find current user's rank by username
-      if (currentUsername) {
-        const userEntry = data.leaderboard?.find((entry: LeaderboardEntry) => 
-          entry.username === currentUsername
-        )
-        setUserRank(userEntry ? userEntry.rank : null)
-      }
-      
-      setError(null)
-    } catch (err: any) {
-      console.error('Error fetching leaderboard:', err)
-      setError(err.message || 'Failed to load leaderboard')
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [isAuthenticated, username, router])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />
@@ -83,7 +40,7 @@ export default function LeaderboardPage() {
   }
 
   const getRankStyle = (username: string, rank: number) => {
-    const isUser = currentUsername && username === currentUsername
+    const isUser = username && username === username
     if (isUser) return 'bg-orange-100 border-orange-300 shadow-lg ring-2 ring-orange-400'
     if (rank === 1) return 'bg-yellow-50 border-yellow-300'
     if (rank === 2) return 'bg-gray-50 border-gray-300'
@@ -91,8 +48,8 @@ export default function LeaderboardPage() {
     return 'bg-white border-gray-200'
   }
 
-  const isCurrentUser = (username: string) => {
-    return currentUsername && username === currentUsername
+  const isCurrentUser = (entryUsername: string) => {
+    return username && entryUsername === username
   }
 
   return (
@@ -115,9 +72,9 @@ export default function LeaderboardPage() {
                 <p className="text-sm text-gray-600">See how you rank globally</p>
               </div>
             </div>
-            {userRank && (
+            {username && (
               <Badge className="bg-orange-100 text-orange-700 border-orange-200 px-3 py-1 rounded-xl">
-                Rank #{userRank}
+                @{username}
               </Badge>
             )}
           </div>
@@ -219,7 +176,7 @@ export default function LeaderboardPage() {
               <CardContent className="p-4 text-center">
                 <p className="text-red-600">{error}</p>
                 <Button 
-                  onClick={fetchLeaderboard} 
+                  onClick={() => window.location.reload()} 
                   className="mt-2 bg-red-600 hover:bg-red-700"
                   size="sm"
                 >
@@ -305,14 +262,14 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Your Stats Card */}
-        {userRank && userRank > 3 && (
+        {username && leaderboard.find(e => isCurrentUser(e.username)) && (
           <Card className="bg-gradient-to-br from-orange-500 to-red-600 border-0 shadow-xl rounded-2xl text-white">
             <CardContent className="p-6">
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-4">Your Performance</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-white/20 rounded-2xl p-4 backdrop-blur-sm">
-                    <div className="text-2xl font-bold mb-1">#{userRank}</div>
+                    <div className="text-2xl font-bold mb-1">#{leaderboard.find(e => isCurrentUser(e.username))?.rank || '---'}</div>
                     <div className="text-white/80 text-sm">Global Rank</div>
                   </div>
                   <div className="bg-white/20 rounded-2xl p-4 backdrop-blur-sm">
@@ -323,9 +280,9 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="bg-white/20 rounded-2xl p-4 backdrop-blur-sm">
                     <div className="text-2xl font-bold mb-1">
-                      {leaderboard.find(e => isCurrentUser(e.username))?.totalEntries || 0}
+                      {leaderboard.find(e => isCurrentUser(e.username))?.totalXP || 0}
                     </div>
-                    <div className="text-white/80 text-sm">Food Entries</div>
+                    <div className="text-white/80 text-sm">Total XP</div>
                   </div>
                 </div>
               </div>

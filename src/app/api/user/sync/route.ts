@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('Error syncing user:', error)
     return NextResponse.json(
       { error: 'Failed to sync user', details: error.message },
       { status: 500 }
@@ -70,7 +69,6 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('Error getting user:', error)
     return NextResponse.json(
       { error: 'Failed to get user', details: error.message },
       { status: 500 }
