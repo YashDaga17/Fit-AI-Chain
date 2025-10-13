@@ -66,9 +66,11 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       if (!response.ok) throw new Error('SIWE verification failed')
       
       const result = await response.json()
+      console.log('🔄 SIWE verification result:', result)
 
       if (result.isValid) {
         const username = MiniKit.user?.username || result.address?.substring(0, 8)
+        console.log('✅ Authentication successful, calling onConnect with:', { address: result.address, username })
         onConnect(result.address, username)
       } else {
         throw new Error("Verification failed")
@@ -129,8 +131,10 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
             {/* Dev mode bypass button */}
             <Button
               onClick={() => {
+                console.log('🧪 Dev mode bypass triggered')
                 const testAddress = "0x" + Math.random().toString(16).substr(2, 40)
                 const testUsername = "dev_user_" + Date.now()
+                console.log('🧪 Calling onConnect with test data:', { testAddress, testUsername })
                 onConnect(testAddress, testUsername)
               }}
               variant="outline"

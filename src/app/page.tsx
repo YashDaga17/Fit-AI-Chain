@@ -60,30 +60,61 @@ export default function Home() {
     }
   }, [router])
 
+  // Watch for authentication state changes and provide backup redirect
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('🔄 Authentication state detected, backup redirect trigger')
+      const timer = setTimeout(() => {
+        console.log('🔄 Backup redirect to /tracker executing')
+        router.push('/tracker')
+      }, 200) // Slightly longer delay for backup
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthenticated, router])
+
   const handleConnect = async (address: string, username?: string) => {
+    console.log('🔄 handleConnect called with:', { address, username })
+    
     const identifier = username || address
     
-    if (!identifier) return
+    if (!identifier) {
+      console.error('❌ No identifier provided')
+      return
+    }
     
     // Set auth for this session only (no persistence)
-    localStorage.setItem("wallet_auth", JSON.stringify({ 
+    const authData = {
       username: identifier,
       verified: true,
       connectedAt: new Date().toISOString()
-    }))
+    }
+    
+    localStorage.setItem("wallet_auth", JSON.stringify(authData))
+    console.log('✅ Auth data stored in localStorage')
 
     // Sync user with database
     try {
+      console.log('🔄 Syncing user with database...')
       await fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: identifier }),
       })
+      console.log('✅ User sync completed')
     } catch (error) {
+      console.error('⚠️ User sync failed:', error)
       // Continue even if sync fails
     }
 
-    router.push('/tracker')
+    console.log('🔄 Setting authentication state and redirecting...')
+    setIsAuthenticated(true)
+    
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      console.log('🔄 Executing redirect to /tracker')
+      router.push('/tracker')
+    }, 50)
   }
 
   if (!isInitialized) {

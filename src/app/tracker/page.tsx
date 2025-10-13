@@ -46,26 +46,39 @@ interface UserStats {
 }
 
 export default function TrackerPage() {
+  console.log('🎯 TrackerPage component loaded')
+  
   const router = useRouter()
-  const { isAuthenticated, username } = useAuth()
+  const { isAuthenticated, username, isLoading } = useAuth()
   const { isAnalyzing, error: analysisError, analyzeFood, getFoodEntries, clearError } = useFoodAnalysis()
   const { userStats, refreshData } = useUserStats(username)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([])
   const [mounted, setMounted] = useState(false)
 
+  console.log('🎯 TrackerPage auth state:', { isAuthenticated, username, isLoading })
+
   useEffect(() => {
+    console.log('🎯 TrackerPage mounted')
     setMounted(true)
   }, [])
 
   useEffect(() => {
+    // Don't redirect while auth is still loading
+    if (isLoading) {
+      console.log('🎯 Auth still loading, waiting...')
+      return
+    }
+    
     if (!isAuthenticated || !username) {
+      console.log('🎯 Not authenticated, redirecting to home')
       router.push('/')
       return
     }
 
+    console.log('🎯 Authenticated, loading food entries')
     loadFoodEntries()
-  }, [isAuthenticated, username, router])
+  }, [isAuthenticated, username, isLoading, router])
 
   const loadFoodEntries = useCallback(async () => {
     if (!username) return
@@ -120,14 +133,17 @@ export default function TrackerPage() {
   }
   const achievements = mounted && userStats ? getAchievements(userStats.totalXP || 0, userStats.streak || 1, foodEntries.length) : []
 
-  if (!mounted) {
+  // Show loading while authentication is being checked
+  if (isLoading || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 bg-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🍎</span>
           </div>
-          <p className="text-orange-600">Loading Fit AI Chain...</p>
+          <p className="text-orange-600">
+            {isLoading ? 'Checking authentication...' : 'Loading Fit AI Chain...'}
+          </p>
         </div>
       </div>
     )
