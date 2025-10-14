@@ -56,24 +56,26 @@ export default function Home() {
       // Install MiniKit synchronously with error handling
       let miniKitInstalled = false
       try {
-        if (typeof window !== "undefined" && !MiniKit.isInstalled()) {
-          MiniKit.install(appId)
-        }
-        miniKitInstalled = MiniKit.isInstalled()
-      } catch (error) {
-        // MiniKit not available, continue with fallback detection
+          if (typeof window !== "undefined" && !MiniKit.isInstalled()) {
+            MiniKit.install(appId)
+          }
+          miniKitInstalled = MiniKit.isInstalled()
+        } catch (error) {
         miniKitInstalled = false
       }
       
-      // Simple World App detection
+      // Enhanced World App detection
       const userAgent = navigator.userAgent.toLowerCase()
       const isWorldAppUA = userAgent.includes('worldapp') || userAgent.includes('minikit')
       const hasWorldBridge = typeof (window as any).WorldApp !== 'undefined'
+      const hasWebViewBridge = typeof (window as any).webkit?.messageHandlers?.minikit !== 'undefined'
       
-      setIsWorldApp(miniKitInstalled || isWorldAppUA || hasWorldBridge)
+      
+      const isInWorldApp = miniKitInstalled || isWorldAppUA || hasWorldBridge || hasWebViewBridge
+      setIsWorldApp(isInWorldApp)
       setIsInitialized(true)
+      
     } catch (error) {
-      console.error('Initialization error:', error)
       setIsWorldApp(false)
       setIsInitialized(true)
     }
@@ -122,18 +124,15 @@ export default function Home() {
   }
 
   const handleConnect = async (address: string, username?: string) => {
-    console.log('🔄 handleConnect called with:', { address, username })
     
     const identifier = username || address
     
     if (!identifier) {
-      console.error('❌ No identifier provided')
       return
     }
     
     // Sync user with database FIRST before setting auth
     try {
-      console.log('🔄 Syncing user with database...')
       const syncResponse = await fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,12 +141,10 @@ export default function Home() {
       
       if (!syncResponse.ok) {
         const errorData = await syncResponse.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('❌ User sync failed:', errorData)
         throw new Error(errorData.error || 'Failed to sync user data')
       }
       
       const result = await syncResponse.json()
-      console.log('✅ User sync completed:', result)
       
       // Only set auth AFTER successful sync
       const authData = {
@@ -157,7 +154,6 @@ export default function Home() {
       }
       
       localStorage.setItem("wallet_auth", JSON.stringify(authData))
-      console.log('✅ Auth data stored in localStorage')
       
       // Small delay to ensure state updates properly
       setTimeout(() => {
@@ -165,7 +161,6 @@ export default function Home() {
       }, 100)
       
     } catch (error: any) {
-      console.error('⚠️ User sync error:', error)
       
       // Show error to user but still allow them to proceed in dev mode
       if (confirm(`Database sync failed: ${error.message}\n\nContinue in offline mode? (Development only)`)) {
@@ -177,7 +172,6 @@ export default function Home() {
         }
         
         localStorage.setItem("wallet_auth", JSON.stringify(authData))
-        console.log('⚠️ Auth data stored in offline mode')
         window.location.reload()
       }
     }

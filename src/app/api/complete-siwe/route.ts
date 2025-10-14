@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
       address: payload.address,
     })
   } catch (error: any) {
-    console.error('SIWE verification error:', error)
     return NextResponse.json({
       status: 'error',
       isValid: false,

@@ -61,7 +61,6 @@ export default function WorldIDVerify({ onSuccess, onError }: WorldIDVerifyProps
       onSuccess(finalPayload as ISuccessResult)
       
     } catch (error: any) {
-      console.error('World ID Verification Error:', error)
       setVerificationStatus('error')
       setErrorMessage(error.message || 'Verification failed. Please try again.')
       onError?.(error)

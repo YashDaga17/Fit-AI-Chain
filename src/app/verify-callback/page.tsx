@@ -34,7 +34,6 @@ function VerifyCallbackContent() {
           throw new Error('Incomplete verification data received')
         }
 
-        console.log('Processing World ID verification callback...')
         
         // Send verification to backend
         const verifyResponse = await fetch('/api/world-id/verify', {
@@ -85,7 +84,6 @@ function VerifyCallbackContent() {
         }
         
       } catch (error) {
-        console.error('Verification callback error:', error)
         setStatus('error')
         setMessage(error instanceof Error ? error.message : 'Verification failed')
         

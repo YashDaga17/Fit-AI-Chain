@@ -28,9 +28,6 @@ export async function verifyWorldIDAction(options: VerifyOptions): Promise<boole
       console.warn('MiniKit not installed')
       return false
     }
-
-    console.log(`🌍 Starting World ID verification for action: ${action}`)
-
     const { finalPayload } = await MiniKit.commandsAsync.verify({
       action,
       signal,
@@ -60,7 +57,6 @@ export async function verifyWorldIDAction(options: VerifyOptions): Promise<boole
     }
 
     const result = await response.json()
-    console.log('✅ World ID verification successful:', result)
     return result.verified === true || result.verifyRes?.success === true
   } catch (error) {
     console.error('World ID verification error:', error)

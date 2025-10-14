@@ -155,7 +155,6 @@ function validateAndParseVerification(data: any): VerificationData | null {
     // Check if verification is expired
     const now = Date.now()
     if (data.expiresAt && now > data.expiresAt) {
-      console.log('Verification expired')
       return null
     }
 
@@ -239,7 +238,6 @@ export function clearAllUserData() {
     localStorage.removeItem('user_stats')
     localStorage.removeItem('food_entries')
     localStorage.removeItem('user_preferences')
-    console.log('All user data cleared')
     return true
   } catch (error) {
     console.error('Error clearing user data:', error)
@@ -266,7 +264,6 @@ export function migrateGuestToVerified(newVerification: VerificationData): boole
         verification: updatedVerification
       })
       
-      console.log('Successfully migrated guest account to verified')
       return true
     }
     

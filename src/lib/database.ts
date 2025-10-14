@@ -18,10 +18,8 @@ export async function testConnection() {
     const client = await pool.connect()
     const res = await client.query('SELECT NOW()')
     client.release()
-    console.log('Database connected successfully:', res.rows[0])
     return true
   } catch (err) {
-    console.error('Database connection error:', err)
     return false
   }
 }
@@ -194,11 +192,9 @@ export async function initializeDatabase() {
     `)
     
     await client.query('COMMIT')
-    console.log('Database tables initialized successfully')
     
   } catch (error) {
     await client.query('ROLLBACK')
-    console.error('Error initializing database:', error)
     throw error
   } finally {
     client.release()

@@ -64,7 +64,6 @@ export function useWorldIDActions(): UseWorldIDActionsReturn {
     } catch (err: any) {
       const errorMsg = err.message || 'Verification failed'
       setError(errorMsg)
-      console.error('World ID action error:', errorMsg)
       return null
     } finally {
       setIsVerifying(false)

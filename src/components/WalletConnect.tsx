@@ -82,7 +82,6 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
             onConnect(result.address, username)
           }, 500)
         } catch (error) {
-          console.error('Failed to fetch username:', error)
           const username = result.address?.substring(0, 8)
           
           // Show syncing state even with fallback username
@@ -154,10 +153,8 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
             {/* Dev mode bypass button */}
             <Button
               onClick={() => {
-                console.log('🧪 Dev mode bypass triggered')
                 const testAddress = "0x" + Math.random().toString(16).substr(2, 40)
                 const testUsername = "dev_user_" + Date.now()
-                console.log('🧪 Calling onConnect with test data:', { testAddress, testUsername })
                 
                 // Show syncing state
                 setSyncingUser(true)

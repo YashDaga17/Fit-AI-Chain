@@ -47,7 +47,6 @@ interface UserStats {
 }
 
 export default function TrackerPage() {
-  console.log('🎯 TrackerPage component loaded')
   
   const router = useRouter()
   const { isAuthenticated, username, isLoading } = useAuth()
@@ -57,27 +56,22 @@ export default function TrackerPage() {
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([])
   const [mounted, setMounted] = useState(false)
 
-  console.log('🎯 TrackerPage auth state:', { isAuthenticated, username, isLoading })
 
   useEffect(() => {
-    console.log('🎯 TrackerPage mounted')
     setMounted(true)
   }, [])
 
   useEffect(() => {
     // Don't redirect while auth is still loading
     if (isLoading) {
-      console.log('🎯 Auth still loading, waiting...')
       return
     }
     
     if (!isAuthenticated || !username) {
-      console.log('🎯 Not authenticated, redirecting to home')
       router.push('/')
       return
     }
 
-    console.log('🎯 Authenticated, loading food entries')
     loadFoodEntries()
   }, [isAuthenticated, username, isLoading, router])
 

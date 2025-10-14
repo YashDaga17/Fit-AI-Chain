@@ -126,7 +126,6 @@ export function useFoodAnalysis() {
             throw new Error(error.message || 'Failed to save to database')
           }
         } catch (dbError: any) {
-          console.error('Database save error:', dbError)
           setError('Analysis successful! Food logged locally, but couldn\'t sync to cloud database.')
           return newEntry // Still return the entry even if DB save fails
         }

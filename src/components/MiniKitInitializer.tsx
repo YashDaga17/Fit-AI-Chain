@@ -17,33 +17,23 @@ export default function MiniKitInitializer() {
         // Check if running in World App
         const isWorldApp = window.navigator.userAgent.includes('worldapp') || 
                           window.navigator.userAgent.includes('MiniKit')
-        
-        console.log('MiniKit initialization:', { 
-          isWorldApp, 
-          appId,
-          userAgent: window.navigator.userAgent.substring(0, 50)
-        })
+
 
         if (!isWorldApp) {
-          console.log('Not running in World App, skipping MiniKit installation')
           setInitialized(true)
           return
         }
 
         // Check if MiniKit is already installed
         if (MiniKit.isInstalled && MiniKit.isInstalled()) {
-          console.log('MiniKit is already installed')
           setInitialized(true)
           return
         }
 
         // Install MiniKit
-        console.log('Installing MiniKit with app_id:', appId)
         await MiniKit.install(appId)
-        console.log('MiniKit installed successfully')
         setInitialized(true)
       } catch (error) {
-        console.error('Error initializing MiniKit:', error)
         // Don't throw - allow app to continue without MiniKit
         setInitialized(true)
       }

@@ -35,14 +35,12 @@ if (!connectionString) {
 
     // Handle pool errors
     pool.on('error', (err: any) => {
-      console.error('Unexpected database pool error:', err)
     })
 
     // Test connection
     pool.query('SELECT 1').then(() => {
-      console.log('✅ Database connected successfully')
     }).catch((err: any) => {
-      console.error('❌ Database connection failed:', err.message)
+      console.error('Database connection failed:', err.message)
     })
 
     // Create drizzle instance
@@ -50,7 +48,7 @@ if (!connectionString) {
     isDatabaseConnected = true
 
   } catch (error) {
-    console.error('❌ Failed to initialize database:', error)
+    console.error('Failed to initialize database:', error)
     db = null
     pool = null
     isDatabaseConnected = false

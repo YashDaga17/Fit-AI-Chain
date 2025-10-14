@@ -29,14 +29,6 @@ export async function POST(req: NextRequest) {
   try {
     const { username, foodLog } = await req.json()
     
-    console.log('📝 Saving food log for user:', username)
-    console.log('📊 Food log data:', {
-      food: foodLog.food,
-      calories: foodLog.calories,
-      imageSize: foodLog.image?.length || 0,
-      hasNutrients: !!foodLog.nutrients
-    })
-    
     if (!username || !foodLog) {
       return NextResponse.json({ success: false, message: "Missing username or foodLog" }, { status: 400 })
     }
@@ -66,12 +58,9 @@ export async function POST(req: NextRequest) {
     // Create food entry with proper error handling
     const newEntry = await createFoodEntry(sanitizedEntry)
     
-    console.log('✅ Food log saved successfully:', newEntry.id)
     
     return NextResponse.json({ success: true, log: newEntry })
   } catch (error: any) {
-    console.error('❌ Food log save error:', error.message)
-    console.error('Error details:', error)
     
     // Return more specific error messages
     if (error.message?.includes('connection')) {

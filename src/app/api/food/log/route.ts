@@ -77,7 +77,6 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('Error logging food:', error)
     return NextResponse.json(
       { error: 'Failed to log food', details: error.message },
       { status: 500 }
@@ -120,7 +119,6 @@ export async function GET(req: NextRequest) {
       count: entries.length,
     })
   } catch (error: any) {
-    console.error('Error getting food entries:', error)
     return NextResponse.json(
       { error: 'Failed to get food entries', details: error.message },
       { status: 500 }
