@@ -56,10 +56,10 @@ export default function Home() {
       // Install MiniKit synchronously with error handling
       let miniKitInstalled = false
       try {
-          if (typeof window !== "undefined" && !MiniKit.isInstalled()) {
+          if (typeof window !== "undefined") {
             MiniKit.install(appId)
+            miniKitInstalled = MiniKit.isInstalled()
           }
-          miniKitInstalled = MiniKit.isInstalled()
         } catch (error) {
         miniKitInstalled = false
       }

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: 'success',
       isValid: true,
-      address: payload.address,
+      address: validMessage.siweMessageData.address,
     })
   } catch (error: any) {
     return NextResponse.json({
