@@ -14,6 +14,7 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
+  const [syncingUser, setSyncingUser] = useState(false)
 
   // Check if MiniKit is available (for example, if running inside World App)
   const isMiniKitAvailable = useMemo(() => {
@@ -70,7 +71,15 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       if (result.isValid) {
         const worldIdUser = await MiniKit.getUserByAddress(result.address)
         const username = worldIdUser?.username || result.address?.substring(0, 8)
-        onConnect(result.address, username)
+        
+        // Show syncing state
+        setSyncingUser(true)
+        setError(null)
+        
+        // Add a small delay to ensure proper state update
+        setTimeout(() => {
+          onConnect(result.address, username)
+        }, 500)
       } else {
         throw new Error("Verification failed")
       }
@@ -78,6 +87,7 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       setError(err.message || "Connection failed. Please try again.")
     } finally {
       setIsConnecting(false)
+      setSyncingUser(false)
     }
   }
 
@@ -134,13 +144,29 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
                 const testAddress = "0x" + Math.random().toString(16).substr(2, 40)
                 const testUsername = "dev_user_" + Date.now()
                 console.log('🧪 Calling onConnect with test data:', { testAddress, testUsername })
-                onConnect(testAddress, testUsername)
+                
+                // Show syncing state
+                setSyncingUser(true)
+                setError(null)
+                
+                // Add a small delay to ensure proper state update
+                setTimeout(() => {
+                  onConnect(testAddress, testUsername)
+                }, 500)
               }}
               variant="outline"
               size="sm"
               className="w-full"
+              disabled={syncingUser}
             >
-              🧪 Dev Mode: Skip (Testing Only)
+              {syncingUser ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                "🧪 Dev Mode: Skip (Testing Only)"
+              )}
             </Button>
             
             {/* Force World App mode for testing */}
@@ -156,22 +182,26 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
               🔄 Force Refresh Detection
             </Button>
           </div>
-        ) : (
-          <Button
-            onClick={handleConnect}
-            disabled={isConnecting}
-            size="lg"
-            className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 shadow-lg"
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              "🔐 Connect Wallet"
-            )}
-          </Button>
+        ) : (        <Button
+          onClick={handleConnect}
+          disabled={isConnecting || syncingUser}
+          size="lg"
+          className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 shadow-lg"
+        >
+          {isConnecting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Connecting...
+            </>
+          ) : syncingUser ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Syncing user data...
+            </>
+          ) : (
+            "🔐 Connect Wallet"
+          )}
+        </Button>
         )}
 
         {error && (

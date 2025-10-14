@@ -31,12 +31,29 @@ export function useUserStats(username: string | null) {
     try {
       const response = await fetch(`/api/user/sync?username=${username}`)
       if (!response.ok) {
-        throw new Error('Failed to fetch user stats')
+        if (response.status === 404) {
+          // User not found, try to create them
+          console.log('User not found, attempting to sync/create...')
+          const syncResponse = await fetch('/api/user/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username }),
+          })
+          
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json()
+            return syncData.user
+          }
+        }
+        
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
       
       const data = await response.json()
       return data.user
     } catch (error: any) {
+      console.error('Failed to fetch user stats:', error)
       setError(error.message || 'Failed to fetch user stats')
       return null
     }
@@ -46,13 +63,17 @@ export function useUserStats(username: string | null) {
     try {
       const response = await fetch(`/api/leaderboard-db?limit=${limit}`)
       if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard')
+        const errorData = await response.json().catch(() => ({}))
+        console.warn('Leaderboard fetch failed:', errorData)
+        // Return empty array instead of throwing error for leaderboard
+        return []
       }
       
       const data = await response.json()
       return data.leaderboard || []
     } catch (error: any) {
-      setError(error.message || 'Failed to fetch leaderboard')
+      console.error('Failed to fetch leaderboard:', error)
+      // Don't set error for leaderboard failures, just return empty array
       return []
     }
   }, [])
@@ -78,7 +99,7 @@ export function useUserStats(username: string | null) {
     }
   }, [])
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (retryCount = 0) => {
     if (!username) return
 
     setLoading(true)
@@ -95,6 +116,15 @@ export function useUserStats(username: string | null) {
       }
       setLeaderboard(leaderboardData)
     } catch (error: any) {
+      console.error('Load data error:', error)
+      
+      // Retry once for new users
+      if (retryCount === 0 && error.message.includes('Failed to fetch')) {
+        console.log('Retrying data load for new user...')
+        setTimeout(() => loadData(1), 1000)
+        return
+      }
+      
       setError(error.message || 'Failed to load data')
     } finally {
       setLoading(false)

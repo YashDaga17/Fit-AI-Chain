@@ -131,17 +131,7 @@ export default function Home() {
       return
     }
     
-    // Set auth for this session only (no persistence)
-    const authData = {
-      username: identifier,
-      verified: true,
-      connectedAt: new Date().toISOString()
-    }
-    
-    localStorage.setItem("wallet_auth", JSON.stringify(authData))
-    console.log('✅ Auth data stored in localStorage')
-
-    // Sync user with database
+    // Sync user with database FIRST before setting auth
     try {
       console.log('🔄 Syncing user with database...')
       const syncResponse = await fetch('/api/user/sync', {
@@ -151,17 +141,45 @@ export default function Home() {
       })
       
       if (!syncResponse.ok) {
-        const errorData = await syncResponse.json()
+        const errorData = await syncResponse.json().catch(() => ({ error: 'Unknown error' }))
         console.error('❌ User sync failed:', errorData)
-        // Show user-friendly error but continue
-        console.warn('Database sync failed, continuing with local auth only')
-      } else {
-        const result = await syncResponse.json()
-        console.log('✅ User sync completed:', result)
+        throw new Error(errorData.error || 'Failed to sync user data')
       }
-    } catch (error) {
-      console.error('⚠️ User sync network error:', error)
-      // Continue even if sync fails completely
+      
+      const result = await syncResponse.json()
+      console.log('✅ User sync completed:', result)
+      
+      // Only set auth AFTER successful sync
+      const authData = {
+        username: identifier,
+        verified: true,
+        connectedAt: new Date().toISOString()
+      }
+      
+      localStorage.setItem("wallet_auth", JSON.stringify(authData))
+      console.log('✅ Auth data stored in localStorage')
+      
+      // Small delay to ensure state updates properly
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
+      
+    } catch (error: any) {
+      console.error('⚠️ User sync error:', error)
+      
+      // Show error to user but still allow them to proceed in dev mode
+      if (confirm(`Database sync failed: ${error.message}\n\nContinue in offline mode? (Development only)`)) {
+        const authData = {
+          username: identifier,
+          verified: true,
+          connectedAt: new Date().toISOString(),
+          offlineMode: true
+        }
+        
+        localStorage.setItem("wallet_auth", JSON.stringify(authData))
+        console.log('⚠️ Auth data stored in offline mode')
+        window.location.reload()
+      }
     }
   }
 
