@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const app_id = process.env.APP_ID
+    const app_id = process.env.NEXT_PUBLIC_WLD_APP_ID || process.env.APP_ID
     if (!app_id) {
       return NextResponse.json(
         { success: false, message: 'World ID not configured' },
