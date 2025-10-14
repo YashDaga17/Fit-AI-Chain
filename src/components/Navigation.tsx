@@ -12,28 +12,22 @@ export default function Navigation() {
 
   const navItems = [
     { 
+      href: '/', 
+      label: 'Home', 
+      icon: Home,
+      active: pathname === '/'
+    },
+    { 
       href: '/tracker', 
       label: 'Food Tracker', 
       icon: Camera,
       active: pathname === '/tracker'
     },
     { 
-      href: '/dashboard', 
-      label: 'Dashboard', 
-      icon: BarChart3,
-      active: pathname === '/dashboard'
-    },
-    { 
       href: '/leaderboard', 
       label: 'Leaderboard', 
       icon: Trophy,
       active: pathname === '/leaderboard'
-    },
-    { 
-      href: '/', 
-      label: 'Home', 
-      icon: Home,
-      active: pathname === '/'
     },
   ]
 

@@ -22,10 +22,6 @@ async function runMigration() {
   try {
     console.log('🔄 Running food_entries table schema fix...')
 
-    // Read the migration SQL
-    const migrationSQL = readFileSync(join(__dirname, '..', 'migrations', 'fix-food-entries-types.sql'), 'utf-8')
-    
-    // Execute the migration
     console.log('📊 Creating backup table...')
     await sql`CREATE TABLE food_entries_backup AS SELECT * FROM food_entries`
     
@@ -58,7 +54,7 @@ async function runMigration() {
       )
     `
     
-    console.log('� Adding foreign key constraint...')
+    console.log('🔗 Adding foreign key constraint...')
     await sql`ALTER TABLE "food_entries" ADD CONSTRAINT "food_entries_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action`
     
     console.log('🗑️ Cleaning up backup table...')

@@ -110,14 +110,14 @@ export function useFoodAnalysis() {
           alternatives: result.alternatives
         }
 
-        // Step 2: Save to database
+        // Step 2: Save to database (with the full image data)
         try {
           const dbResponse = await fetch('/api/food-logs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               username,
-              foodLog: newEntry
+              foodLog: newEntry // Store the complete entry including base64 image
             })
           })
 
@@ -126,7 +126,8 @@ export function useFoodAnalysis() {
             throw new Error(error.message || 'Failed to save to database')
           }
         } catch (dbError: any) {
-          setError('Analysis successful but failed to save to database: ' + dbError.message)
+          console.error('Database save error:', dbError)
+          setError('Analysis successful! Food logged locally, but couldn\'t sync to cloud database.')
           return newEntry // Still return the entry even if DB save fails
         }
 
@@ -150,7 +151,26 @@ export function useFoodAnalysis() {
       }
       
       const data = await response.json()
-      return data.logs || []
+      const logs = data.logs || []
+      
+      // Convert database entries to FoodEntry format
+      return logs.map((log: any) => ({
+        id: log.id?.toString() || Date.now().toString(),
+        image: log.imageUrl || '/placeholder-food.jpg', // Use stored image URL or placeholder
+        food: log.foodName || log.food,
+        calories: log.calories || 0,
+        timestamp: new Date(log.createdAt || Date.now()).getTime(),
+        xp: log.xpEarned || log.xp || 0,
+        confidence: log.confidence,
+        cuisine: log.cuisine,
+        portionSize: log.portionSize,
+        ingredients: log.ingredients,
+        cookingMethod: log.cookingMethod,
+        nutrients: log.nutrients,
+        healthScore: log.healthScore,
+        allergens: log.allergens,
+        alternatives: log.alternatives
+      }))
     } catch (error: any) {
       setError(error.message || 'Failed to fetch food entries')
       return []

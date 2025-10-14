@@ -56,7 +56,7 @@ export default function LeaderboardPage() {
   }
 
   const getRankStyle = (username: string, rank: number) => {
-    const isUser = username && username === username
+    const isUser = isCurrentUser(username)
     if (isUser) return 'bg-orange-100 border-orange-300 shadow-lg ring-2 ring-orange-400'
     if (rank === 1) return 'bg-yellow-50 border-yellow-300'
     if (rank === 2) return 'bg-gray-50 border-gray-300'
@@ -221,7 +221,7 @@ export default function LeaderboardPage() {
                     {/* Rank */}
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
                       isCurrentUser(entry.username)
-                        ? 'bg-white/20 backdrop-blur-sm text-white' 
+                        ? 'bg-orange-200 text-orange-900' 
                         : entry.rank <= 3
                         ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
                         : 'bg-gray-100 text-gray-600'
@@ -236,18 +236,18 @@ export default function LeaderboardPage() {
                     {/* Avatar & Name */}
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${
-                        isCurrentUser(entry.username) ? 'bg-white/20 backdrop-blur-sm' : 'bg-gray-100'
+                        isCurrentUser(entry.username) ? 'bg-orange-200' : 'bg-gray-100'
                       }`}>
                         {isCurrentUser(entry.username) ? '🎯' : '👤'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className={`font-semibold truncate ${
-                          isCurrentUser(entry.username) ? 'text-white' : 'text-gray-900'
+                          isCurrentUser(entry.username) ? 'text-orange-900' : 'text-gray-900'
                         }`}>
                           {isCurrentUser(entry.username) ? '🎯 You' : entry.username}
                         </div>
                         <div className={`text-sm flex items-center space-x-2 ${
-                          isCurrentUser(entry.username) ? 'text-white/80' : 'text-gray-600'
+                          isCurrentUser(entry.username) ? 'text-orange-700' : 'text-gray-600'
                         }`}>
                           <span>Level {entry.level || 1}</span>
                           <span>•</span>
@@ -261,11 +261,11 @@ export default function LeaderboardPage() {
 
                     {/* Stats */}
                     <div className="text-right">
-                      <div className={`font-bold ${isCurrentUser(entry.username) ? 'text-white' : 'text-gray-900'}`}>
+                      <div className={`font-bold ${isCurrentUser(entry.username) ? 'text-orange-900' : 'text-gray-900'}`}>
                         {(entry.totalXP || 0).toLocaleString()}
                       </div>
                       <div className={`text-xs uppercase tracking-wide ${
-                        isCurrentUser(entry.username) ? 'text-white/70' : 'text-gray-500'
+                        isCurrentUser(entry.username) ? 'text-orange-600' : 'text-gray-500'
                       }`}>
                         XP Points
                       </div>

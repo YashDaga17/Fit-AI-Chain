@@ -66,11 +66,10 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       if (!response.ok) throw new Error('SIWE verification failed')
       
       const result = await response.json()
-      console.log('🔄 SIWE verification result:', result)
 
       if (result.isValid) {
-        const username = MiniKit.user?.username || result.address?.substring(0, 8)
-        console.log('✅ Authentication successful, calling onConnect with:', { address: result.address, username })
+        const worldIdUser = await MiniKit.getUserByAddress(result.address)
+        const username = worldIdUser?.username || result.address?.substring(0, 8)
         onConnect(result.address, username)
       } else {
         throw new Error("Verification failed")
