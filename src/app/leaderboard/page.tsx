@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserStats } from '@/hooks/useUserStats'
+import Navigation from '@/components/Navigation'
 
 interface LeaderboardEntry {
   rank: number
@@ -21,16 +22,31 @@ interface LeaderboardEntry {
 
 export default function LeaderboardPage() {
   const router = useRouter()
-  const { isAuthenticated, username } = useAuth()
+  const { isAuthenticated, username, isLoading } = useAuth()
   const { leaderboard, loading, error } = useUserStats(username)
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'alltime'>('alltime')
 
   useEffect(() => {
+    // Don't redirect while auth is still loading
+    if (isLoading) return
+    
     if (!isAuthenticated || !username) {
       router.push('/')
       return
     }
-  }, [isAuthenticated, username, router])
+  }, [isAuthenticated, username, isLoading, router])
+
+  // Show loading while authentication is being checked
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-600 mx-auto mb-4" />
+          <p className="text-orange-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />
@@ -292,42 +308,7 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 px-6 py-4 z-30">
-        <div className="flex justify-around items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center space-y-1 h-auto py-2 hover:bg-orange-50 rounded-2xl px-4"
-            onClick={() => router.push('/dashboard')}
-          >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <House className="w-5 h-5 text-gray-600" />
-            </div>
-            <span className="text-xs text-gray-600">Home</span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center space-y-1 h-auto py-2 hover:bg-orange-50 rounded-2xl px-4"
-            onClick={() => router.push('/tracker')}
-          >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-gray-600" />
-            </div>
-            <span className="text-xs text-gray-600">Tracker</span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center space-y-1 h-auto py-2 bg-orange-100 text-orange-600 rounded-2xl px-4"
-          >
-            <Trophy className="h-5 w-5" />
-            <span className="text-xs font-medium">Leaderboard</span>
-          </Button>
-        </div>
-      </div>
+      <Navigation />
     </div>
   )
 }

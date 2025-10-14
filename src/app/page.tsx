@@ -42,9 +42,21 @@ export default function Home() {
       
       setIsWorldApp(miniKitInstalled || isWorldAppUA || hasWorldBridge)
       
-      // Always clear any existing auth when entering the app
-      // This ensures wallet connect is always shown
-      localStorage.removeItem('wallet_auth')
+      // Check if user is already authenticated
+      try {
+        const authData = localStorage.getItem('wallet_auth')
+        if (authData) {
+          const parsed = JSON.parse(authData)
+          if (parsed.username) {
+            console.log('🔄 User already authenticated, redirecting to tracker')
+            router.push('/tracker')
+            return
+          }
+        }
+      } catch (error) {
+        // Invalid auth data, clear it
+        localStorage.removeItem('wallet_auth')
+      }
       
       setIsInitialized(true)
     } catch (error) {
@@ -96,15 +108,24 @@ export default function Home() {
     // Sync user with database
     try {
       console.log('🔄 Syncing user with database...')
-      await fetch('/api/user/sync', {
+      const syncResponse = await fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: identifier }),
       })
-      console.log('✅ User sync completed')
+      
+      if (!syncResponse.ok) {
+        const errorData = await syncResponse.json()
+        console.error('❌ User sync failed:', errorData)
+        // Show user-friendly error but continue
+        console.warn('Database sync failed, continuing with local auth only')
+      } else {
+        const result = await syncResponse.json()
+        console.log('✅ User sync completed:', result)
+      }
     } catch (error) {
-      console.error('⚠️ User sync failed:', error)
-      // Continue even if sync fails
+      console.error('⚠️ User sync network error:', error)
+      // Continue even if sync fails completely
     }
 
     console.log('🔄 Setting authentication state and redirecting...')

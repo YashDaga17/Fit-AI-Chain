@@ -11,6 +11,7 @@ import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserStats } from '@/hooks/useUserStats'
 import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
+import Navigation from '@/components/Navigation'
 
 interface UserStats {
   totalCalories: number
@@ -30,20 +31,35 @@ interface LeaderboardEntry {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { isAuthenticated, username } = useAuth()
+  const { isAuthenticated, username, isLoading } = useAuth()
   const { userStats, leaderboard, loading } = useUserStats(username)
   const { getFoodEntries } = useFoodAnalysis()
   const [todayCalories, setTodayCalories] = useState(0)
   const [weeklyCalories, setWeeklyCalories] = useState(0)
 
   useEffect(() => {
+    // Don't redirect while auth is still loading
+    if (isLoading) return
+    
     if (!isAuthenticated || !username) {
       router.push('/')
       return
     }
 
     loadCalorieData()
-  }, [isAuthenticated, username, router])
+  }, [isAuthenticated, username, isLoading, router])
+
+  // Show loading while authentication is being checked
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-orange-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   const loadCalorieData = async () => {
     if (!username) return
@@ -253,31 +269,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="flex items-center justify-around py-3 px-4">
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="flex flex-col items-center gap-1 text-orange-600"
-          >
-            <Activity className="w-6 h-6" />
-            <span className="text-xs font-medium">Home</span>
-          </button>
-          <button 
-            onClick={() => router.push('/tracker')}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-orange-600 transition-colors"
-          >
-            <Camera className="w-6 h-6" />
-            <span className="text-xs font-medium">Tracker</span>
-          </button>
-          <button 
-            onClick={() => router.push('/leaderboard')}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-orange-600 transition-colors"
-          >
-            <Trophy className="w-6 h-6" />
-            <span className="text-xs font-medium">Leaderboard</span>
-          </button>
-        </div>
-      </div>
+      <Navigation />
     </div>
   )
 }

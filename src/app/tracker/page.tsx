@@ -12,6 +12,7 @@ import { getUserLevel, getXPProgress, calculateStreakMultiplier, getAchievements
 import { useAuth } from '@/hooks/useAuth'
 import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
 import { useUserStats } from '@/hooks/useUserStats'
+import Navigation from '@/components/Navigation'
 
 interface FoodEntry {
   id: string
@@ -650,44 +651,7 @@ export default function TrackerPage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 px-6 py-4 z-30">
-        <div className="flex justify-between items-center max-w-md mx-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center space-y-1 h-auto py-2 hover:bg-orange-50 rounded-2xl px-4"
-            onClick={() => router.push('/dashboard')}
-          >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <House className="w-5 h-5 text-gray-600" />
-            </div>
-            <span className="text-xs text-gray-600">Home</span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center space-y-1 h-auto py-2 bg-orange-100 text-orange-600 rounded-2xl px-4"
-          >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <Activity className="h-5 w-5" />
-            </div>
-            <span className="text-xs font-medium">Tracker</span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center space-y-1 h-auto py-2 hover:bg-orange-50 rounded-2xl px-4"
-            onClick={() => router.push('/leaderboard')}
-          >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <Trophy className="h-5 w-5 text-gray-600" />
-            </div>
-            <span className="text-xs text-gray-600">Leaderboard</span>
-          </Button>
-        </div>
-      </div>
+      <Navigation />
     </div>
   )
 }
