@@ -264,7 +264,7 @@ export default function LeaderboardPage() {
                       <div className={`font-bold ${isCurrentUser(entry.username) ? 'text-orange-900' : 'text-gray-900'}`}>
                         {(entry.totalXP || 0).toLocaleString()}
                       </div>
-                      <div className={`text-xs uppercase tracking-wide ${
+                      <div className={`text-xs tracking-wide ${
                         isCurrentUser(entry.username) ? 'text-orange-600' : 'text-gray-500'
                       }`}>
                         XP Points
