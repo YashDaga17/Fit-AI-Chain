@@ -69,17 +69,31 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
       const result = await response.json()
 
       if (result.isValid) {
-        const worldIdUser = await MiniKit.getUserByAddress(result.address)
-        const username = worldIdUser?.username || result.address?.substring(0, 8)
-        
-        // Show syncing state
-        setSyncingUser(true)
-        setError(null)
-        
-        // Add a small delay to ensure proper state update
-        setTimeout(() => {
-          onConnect(result.address, username)
-        }, 500)
+        try {
+          const worldIdUser = await MiniKit.getUserByAddress(result.address)
+          const username = worldIdUser?.username || result.address?.substring(0, 8)
+          
+          // Show syncing state
+          setSyncingUser(true)
+          setError(null)
+          
+          // Add a small delay to ensure proper state update
+          setTimeout(() => {
+            onConnect(result.address, username)
+          }, 500)
+        } catch (error) {
+          console.error('Failed to fetch username:', error)
+          const username = result.address?.substring(0, 8)
+          
+          // Show syncing state even with fallback username
+          setSyncingUser(true)
+          setError(null)
+          
+          // Continue with fallback username
+          setTimeout(() => {
+            onConnect(result.address, username)
+          }, 500)
+        }
       } else {
         throw new Error("Verification failed")
       }
