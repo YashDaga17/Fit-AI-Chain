@@ -73,25 +73,29 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
           const worldIdUser = await MiniKit.getUserByAddress(result.address)
           const username = worldIdUser?.username || result.address?.substring(0, 8)
           
+          console.log('✅ Authentication successful, proceeding with username:', username)
+          
           // Show syncing state
           setSyncingUser(true)
           setError(null)
           
-          // Add a small delay to ensure proper state update
-          setTimeout(() => {
-            onConnect(result.address, username)
-          }, 500)
+          // Proceed immediately - no delay needed
+          onConnect(result.address, username)
+          // Trigger auth change event for immediate UI update
+          window.dispatchEvent(new Event('authchange'))
         } catch (error) {
           const username = result.address?.substring(0, 8)
+          
+          console.log('⚠️ Fallback to address-based username:', username)
           
           // Show syncing state even with fallback username
           setSyncingUser(true)
           setError(null)
           
-          // Continue with fallback username
-          setTimeout(() => {
-            onConnect(result.address, username)
-          }, 500)
+          // Continue with fallback username - no delay needed
+          onConnect(result.address, username)
+          // Trigger auth change event for immediate UI update
+          window.dispatchEvent(new Event('authchange'))
         }
       } else {
         throw new Error("Verification failed")
@@ -160,10 +164,10 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
                 setSyncingUser(true)
                 setError(null)
                 
-                // Add a small delay to ensure proper state update
-                setTimeout(() => {
-                  onConnect(testAddress, testUsername)
-                }, 500)
+                // Proceed immediately - no delay needed
+                onConnect(testAddress, testUsername)
+                // Trigger auth change event for immediate UI update
+                window.dispatchEvent(new Event('authchange'))
               }}
               variant="outline"
               size="sm"

@@ -13,6 +13,7 @@ interface AuthActions {
   connect: () => Promise<void>
   disconnect: () => void
   verifyWorldID: () => Promise<boolean>
+  refreshAuth: () => void
 }
 
 export function useAuth(): AuthState & AuthActions {
@@ -24,36 +25,68 @@ export function useAuth(): AuthState & AuthActions {
     error: null
   })
 
-  // Check existing authentication on mount
-  useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const authData = localStorage.getItem('wallet_auth')
-        if (authData) {
-          const parsed = JSON.parse(authData)
-          // Only check if auth exists for this session (no time-based expiry)
-          // This means auth will persist until browser/tab is closed or manually cleared
-          if (parsed.username) {
-            setAuthState({
-              isAuthenticated: true,
-              username: parsed.username,
-              isLoading: false,
-              error: null
-            })
-            return
-          } else {
-            localStorage.removeItem('wallet_auth')
-          }
+  // Check existing authentication
+  const checkAuth = useCallback(() => {
+    try {
+      const authData = localStorage.getItem('wallet_auth')
+      if (authData) {
+        const parsed = JSON.parse(authData)
+        // Only check if auth exists for this session (no time-based expiry)
+        // This means auth will persist until browser/tab is closed or manually cleared
+        if (parsed.username) {
+          console.log('✅ Found existing auth:', parsed)
+          setAuthState({
+            isAuthenticated: true,
+            username: parsed.username,
+            isLoading: false,
+            error: null
+          })
+          return true
+        } else {
+          localStorage.removeItem('wallet_auth')
         }
-      } catch (error) {
-        localStorage.removeItem('wallet_auth')
       }
-      
-      setAuthState(prev => ({ ...prev, isLoading: false }))
+    } catch (error) {
+      console.error('❌ Error checking auth:', error)
+      localStorage.removeItem('wallet_auth')
+    }
+    
+    setAuthState(prev => ({ ...prev, isLoading: false }))
+    return false
+  }, [])
+
+  // Check auth on mount and set up listeners
+  useEffect(() => {
+    console.log('🔄 useAuth: Initial auth check')
+    checkAuth()
+
+    // Listen for storage changes (for cross-tab auth sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'wallet_auth') {
+        console.log('🔄 useAuth: Storage change detected')
+        checkAuth()
+      }
     }
 
+    // Listen for custom auth events (for same-tab auth updates)
+    const handleAuthChange = () => {
+      console.log('🔄 useAuth: Custom auth event detected')
+      checkAuth()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('authchange', handleAuthChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('authchange', handleAuthChange)
+    }
+  }, [checkAuth])
+
+  const refreshAuth = useCallback(() => {
+    console.log('🔄 useAuth: Manual auth refresh')
     checkAuth()
-  }, [])
+  }, [checkAuth])
 
   const connect = useCallback(async () => {
     if (!MiniKit.isInstalled()) {
@@ -196,6 +229,7 @@ export function useAuth(): AuthState & AuthActions {
     ...authState,
     connect,
     disconnect,
-    verifyWorldID
+    verifyWorldID,
+    refreshAuth
   }
 }
