@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit -p tsconfig.typecheck.json",
     "setup": "bash scripts/setup.sh",
     "db:setup": "bash scripts/setup-db.sh",
     "db:studio": "dotenv -e .env.local -- npx drizzle-kit studio",

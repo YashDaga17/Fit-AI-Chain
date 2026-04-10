@@ -2,22 +2,27 @@ import { db, isDatabaseConnected } from './db'
 import { users, foodEntries } from './db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
 
+function createMockUser(
+  username: string,
+  overrides: Partial<Record<'totalXP' | 'totalCalories' | 'level' | 'streak', number>> = {}
+) {
+  return {
+    id: 1,
+    username,
+    totalXP: overrides.totalXP ?? 0,
+    totalCalories: overrides.totalCalories ?? 0,
+    level: overrides.level ?? 1,
+    streak: overrides.streak ?? 1,
+    joinedAt: new Date(),
+    lastActive: new Date(),
+    lastStreakUpdate: new Date(),
+    totalEntries: 0,
+  }
+}
 
 export async function upsertUser(username: string) {
   if (!isDatabaseConnected || !db) {
-    // Return mock user data for development
-    return {
-      id: 1,
-      username,
-      totalXP: 0,
-      totalCalories: 0,
-      level: 1,
-      streak: 1,
-      joinedAt: new Date(),
-      lastActive: new Date(),
-      lastStreakUpdate: new Date(),
-      totalEntries: 0,
-    }
+    return createMockUser(username)
   }
 
   try {
@@ -68,6 +73,10 @@ export async function upsertUser(username: string) {
  * Get user by username
  */
 export async function getUserByUsername(username: string) {
+  if (!isDatabaseConnected || !db) {
+    return createMockUser(username)
+  }
+
   try {
     const [user] = await db
       .select()
@@ -103,6 +112,15 @@ export async function updateUserStats(
     totalCalories?: number
   }
 ) {
+  if (!isDatabaseConnected || !db) {
+    return createMockUser(username, {
+      totalXP: updates.totalXP,
+      totalCalories: updates.totalCalories,
+      level: updates.level,
+      streak: updates.streak,
+    })
+  }
+
   try {
     const [updatedUser] = await db
       .update(users)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { normalizeUsername } from '@/lib/validation'
 
 interface UserStats {
   totalCalories: number
@@ -29,14 +30,19 @@ export function useUserStats(username: string | null) {
 
   const fetchUserStats = useCallback(async (username: string) => {
     try {
-      const response = await fetch(`/api/user/sync?username=${username}`)
+      const normalizedUsername = normalizeUsername(username)
+      if (!normalizedUsername) {
+        throw new Error('Invalid username')
+      }
+
+      const response = await fetch(`/api/user/sync?username=${encodeURIComponent(normalizedUsername)}`)
       if (!response.ok) {
         if (response.status === 404) {
           // User not found, try to create them
           const syncResponse = await fetch('/api/user/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username }),
+            body: JSON.stringify({ username: normalizedUsername }),
           })
           
           if (syncResponse.ok) {
@@ -76,10 +82,15 @@ export function useUserStats(username: string | null) {
 
   const updateUserStats = useCallback(async (username: string, updates: Partial<UserStats>) => {
     try {
+      const normalizedUsername = normalizeUsername(username)
+      if (!normalizedUsername) {
+        throw new Error('Invalid username')
+      }
+
       const response = await fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, ...updates }),
+        body: JSON.stringify({ username: normalizedUsername, ...updates }),
       })
 
       if (!response.ok) {

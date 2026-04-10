@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getLeaderboard } from '@/lib/db-utils'
+import { clampInteger } from '@/lib/validation'
 
 // Type for leaderboard entry
 type LeaderboardEntry = {
@@ -20,7 +21,7 @@ type LeaderboardEntry = {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const limit = parseInt(searchParams.get('limit') || '100')
+    const limit = clampInteger(searchParams.get('limit'), 100, 1, 100)
 
     const leaderboard = await getLeaderboard(limit)
 

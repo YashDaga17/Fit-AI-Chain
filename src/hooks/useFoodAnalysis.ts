@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { normalizeUsername } from '@/lib/validation'
 
 interface FoodEntry {
   id: string
@@ -55,6 +56,11 @@ export function useFoodAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const getErrorMessage = async (response: Response, fallback: string) => {
+    const data = await response.json().catch(() => null)
+    return data?.error || data?.message || fallback
+  }
+
   const analyzeFood = useCallback(async (imageData: string): Promise<FoodEntry | null> => {
     setIsAnalyzing(true)
     setError(null)
@@ -68,7 +74,7 @@ export function useFoodAnalysis() {
       }
 
       const authData = JSON.parse(walletAuth)
-      const username = authData.username
+      const username = normalizeUsername(authData.username)
 
       if (!username) {
         router.push('/')
@@ -86,7 +92,7 @@ export function useFoodAnalysis() {
       })
 
       if (!analyzeResponse.ok) {
-        throw new Error('Failed to analyze food')
+        throw new Error(await getErrorMessage(analyzeResponse, 'Failed to analyze food'))
       }
 
       const result: AnalysisResult = await analyzeResponse.json()
@@ -122,8 +128,18 @@ export function useFoodAnalysis() {
           })
 
           if (!dbResponse.ok) {
-            const error = await dbResponse.json()
-            throw new Error(error.message || 'Failed to save to database')
+            throw new Error(await getErrorMessage(dbResponse, 'Failed to save to database'))
+          }
+
+          const dbData = await dbResponse.json().catch(() => null)
+          const savedLog = dbData?.log
+          if (savedLog) {
+            return {
+              ...newEntry,
+              id: savedLog.id?.toString() || newEntry.id,
+              image: savedLog.imageUrl || newEntry.image,
+              timestamp: new Date(savedLog.createdAt || Date.now()).getTime(),
+            }
           }
         } catch (dbError: any) {
           setError('Analysis successful! Food logged locally, but couldn\'t sync to cloud database.')
@@ -144,9 +160,14 @@ export function useFoodAnalysis() {
 
   const getFoodEntries = useCallback(async (username: string): Promise<FoodEntry[]> => {
     try {
-      const response = await fetch(`/api/food-logs?username=${username}`)
+      const normalizedUsername = normalizeUsername(username)
+      if (!normalizedUsername) {
+        return []
+      }
+
+      const response = await fetch(`/api/food-logs?username=${encodeURIComponent(normalizedUsername)}`)
       if (!response.ok) {
-        throw new Error('Failed to fetch food entries')
+        throw new Error(await getErrorMessage(response, 'Failed to fetch food entries'))
       }
       
       const data = await response.json()

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { MiniKit } from '@worldcoin/minikit-js'
+import { normalizeUsername } from '@/lib/validation'
 
 interface AuthState {
   isAuthenticated: boolean
@@ -31,13 +32,11 @@ export function useAuth(): AuthState & AuthActions {
       const authData = localStorage.getItem('wallet_auth')
       if (authData) {
         const parsed = JSON.parse(authData)
-        // Only check if auth exists for this session (no time-based expiry)
-        // This means auth will persist until browser/tab is closed or manually cleared
-        if (parsed.username) {
-          console.log('✅ Found existing auth:', parsed)
+        const username = normalizeUsername(parsed.username)
+        if (username) {
           setAuthState({
             isAuthenticated: true,
-            username: parsed.username,
+            username,
             isLoading: false,
             error: null
           })
@@ -57,20 +56,17 @@ export function useAuth(): AuthState & AuthActions {
 
   // Check auth on mount and set up listeners
   useEffect(() => {
-    console.log('🔄 useAuth: Initial auth check')
     checkAuth()
 
     // Listen for storage changes (for cross-tab auth sync)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'wallet_auth') {
-        console.log('🔄 useAuth: Storage change detected')
         checkAuth()
       }
     }
 
     // Listen for custom auth events (for same-tab auth updates)
     const handleAuthChange = () => {
-      console.log('🔄 useAuth: Custom auth event detected')
       checkAuth()
     }
 
@@ -84,7 +80,6 @@ export function useAuth(): AuthState & AuthActions {
   }, [checkAuth])
 
   const refreshAuth = useCallback(() => {
-    console.log('🔄 useAuth: Manual auth refresh')
     checkAuth()
   }, [checkAuth])
 
@@ -128,7 +123,11 @@ export function useAuth(): AuthState & AuthActions {
       const result = await siweRes.json()
 
       if (result.isValid) {
-        const username = MiniKit.user?.username || result.address?.substring(0, 8)
+        const username = normalizeUsername(MiniKit.user?.username) || normalizeUsername(result.address?.substring(0, 8))
+
+        if (!username) {
+          throw new Error('Unable to determine a valid username')
+        }
         
         // Store auth data for this session only
         localStorage.setItem('wallet_auth', JSON.stringify({
@@ -143,6 +142,8 @@ export function useAuth(): AuthState & AuthActions {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username }),
         })
+
+        window.dispatchEvent(new Event('authchange'))
 
         setAuthState({
           isAuthenticated: true,
@@ -166,6 +167,7 @@ export function useAuth(): AuthState & AuthActions {
 
   const disconnect = useCallback(() => {
     localStorage.removeItem('wallet_auth')
+    window.dispatchEvent(new Event('authchange'))
     setAuthState({
       isAuthenticated: false,
       username: null,

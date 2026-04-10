@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { upsertUser } from '@/lib/db-utils'
+import { upsertUser, updateUserStats } from '@/lib/db-utils'
+import { normalizeUsername } from '@/lib/validation'
 
 /**
  * POST /api/user/sync
@@ -7,7 +8,8 @@ import { upsertUser } from '@/lib/db-utils'
  */
 export async function POST(req: NextRequest) {
   try {
-    const { username } = await req.json()
+    const body = await req.json()
+    const username = normalizeUsername(body.username)
 
     if (!username) {
       return NextResponse.json(
@@ -16,7 +18,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const user = await upsertUser(username)
+    const existingUser = await upsertUser(username)
+
+    const hasStatUpdates = ['totalXP', 'level', 'streak', 'totalCalories'].some((key) => typeof body[key] === 'number')
+    const user = hasStatUpdates
+      ? await updateUserStats(username, {
+          totalXP: typeof body.totalXP === 'number' ? body.totalXP : undefined,
+          level: typeof body.level === 'number' ? body.level : undefined,
+          streak: typeof body.streak === 'number' ? body.streak : undefined,
+          totalCalories: typeof body.totalCalories === 'number' ? body.totalCalories : undefined,
+        })
+      : existingUser
+    const totalEntries = user?.totalEntries ?? existingUser.totalEntries ?? 0
 
     return NextResponse.json({
       success: true,
@@ -27,7 +40,7 @@ export async function POST(req: NextRequest) {
         level: user.level,
         streak: user.streak,
         totalCalories: user.totalCalories,
-        totalEntries: user.totalEntries,
+        totalEntries,
       },
     })
   } catch (error: any) {
@@ -45,7 +58,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const username = searchParams.get('username')
+    const username = normalizeUsername(searchParams.get('username'))
 
     if (!username) {
       return NextResponse.json(
