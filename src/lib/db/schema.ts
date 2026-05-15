@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, boolean, varchar, decimal } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, integer, timestamp, jsonb, boolean, varchar } from 'drizzle-orm/pg-core'
 
 // Users table - stores World App authenticated users (username only)
 export const users = pgTable('users', {
@@ -104,6 +104,10 @@ export const userPreferences = pgTable('user_preferences', {
   units: varchar('units', { length: 20 }).default('metric'),
   language: varchar('language', { length: 10 }).default('en'),
   dailyCalorieGoal: integer('daily_calorie_goal').default(2000),
+  proteinGoal: integer('protein_goal').default(120),
+  carbsGoal: integer('carbs_goal').default(220),
+  fatGoal: integer('fat_goal').default(70),
+  fiberGoal: integer('fiber_goal').default(30),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

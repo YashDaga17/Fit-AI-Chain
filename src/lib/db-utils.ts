@@ -1,6 +1,7 @@
 import { db, isDatabaseConnected } from './db'
-import { users, foodEntries } from './db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { users, foodEntries, userPreferences } from './db/schema'
+import { and, eq, desc, sql } from 'drizzle-orm'
+import type { UserPreferences, WeeklyAnalytics } from '@/types/analytics'
 
 function createMockUser(
   username: string,
@@ -17,6 +18,20 @@ function createMockUser(
     lastActive: new Date(),
     lastStreakUpdate: new Date(),
     totalEntries: 0,
+  }
+}
+
+function createDefaultPreferences(): UserPreferences {
+  return {
+    dailyCalorieGoal: 2000,
+    proteinGoal: 120,
+    carbsGoal: 220,
+    fatGoal: 70,
+    fiberGoal: 30,
+    theme: 'light',
+    notifications: true,
+    units: 'metric',
+    language: 'en',
   }
 }
 
@@ -189,6 +204,27 @@ export async function createFoodEntry(entry: {
   }
 }
 
+async function recalculateUserTotals(username: string) {
+  const user = await getUserByUsername(username)
+  if (!user || !isDatabaseConnected || !db) {
+    return user
+  }
+
+  const [totals] = await db
+    .select({
+      totalXP: sql<number>`cast(coalesce(sum(${foodEntries.xpEarned}), 0) as integer)`,
+      totalCalories: sql<number>`cast(coalesce(sum(${foodEntries.calories}), 0) as integer)`,
+    })
+    .from(foodEntries)
+    .where(eq(foodEntries.username, username))
+
+  return updateUserStats(username, {
+    totalXP: totals?.totalXP || 0,
+    totalCalories: totals?.totalCalories || 0,
+    level: calculateLevel(totals?.totalXP || 0),
+  })
+}
+
 /**
  * Get food entries for a user
  */
@@ -215,6 +251,70 @@ export async function getFoodEntriesByUsername(
   } catch (error) {
     throw error
   }
+}
+
+export async function updateFoodEntryById(
+  id: number,
+  username: string,
+  updates: {
+    foodName?: string
+    calories?: number
+    xpEarned?: number
+    imageUrl?: string
+    confidence?: string
+    cuisine?: string
+    portionSize?: string
+    ingredients?: string[]
+    cookingMethod?: string
+    nutrients?: any
+    healthScore?: string
+    allergens?: string[]
+    alternatives?: string
+    mealType?: string
+  }
+) {
+  if (!isDatabaseConnected || !db) {
+    return {
+      id,
+      username,
+      ...updates,
+      updatedAt: new Date(),
+    }
+  }
+
+  const [entry] = await db
+    .update(foodEntries)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(foodEntries.id, id), eq(foodEntries.username, username)))
+    .returning()
+
+  if (!entry) {
+    return null
+  }
+
+  await recalculateUserTotals(username)
+  return entry
+}
+
+export async function deleteFoodEntryById(id: number, username: string) {
+  if (!isDatabaseConnected || !db) {
+    return true
+  }
+
+  const [entry] = await db
+    .delete(foodEntries)
+    .where(and(eq(foodEntries.id, id), eq(foodEntries.username, username)))
+    .returning()
+
+  if (!entry) {
+    return false
+  }
+
+  await recalculateUserTotals(username)
+  return true
 }
 
 /**
@@ -329,4 +429,231 @@ export async function getUserStats(username: string) {
   } catch (error) {
     throw error
   }
+}
+
+export async function getUserPreferences(username: string): Promise<UserPreferences> {
+  if (!isDatabaseConnected || !db) {
+    return createDefaultPreferences()
+  }
+
+  const user = await upsertUser(username)
+
+  const [preferences] = await db
+    .select()
+    .from(userPreferences)
+    .where(eq(userPreferences.userId, user.id))
+    .limit(1)
+
+  if (!preferences) {
+    return createDefaultPreferences()
+  }
+
+  return {
+    dailyCalorieGoal: preferences.dailyCalorieGoal ?? 2000,
+    proteinGoal: preferences.proteinGoal ?? 120,
+    carbsGoal: preferences.carbsGoal ?? 220,
+    fatGoal: preferences.fatGoal ?? 70,
+    fiberGoal: preferences.fiberGoal ?? 30,
+    theme: preferences.theme ?? 'light',
+    notifications: preferences.notifications ?? true,
+    units: preferences.units ?? 'metric',
+    language: preferences.language ?? 'en',
+  }
+}
+
+export async function upsertUserPreferences(
+  username: string,
+  updates: Partial<UserPreferences>
+): Promise<UserPreferences> {
+  const nextPreferences = {
+    ...createDefaultPreferences(),
+    ...updates,
+  }
+
+  if (!isDatabaseConnected || !db) {
+    return nextPreferences
+  }
+
+  const user = await upsertUser(username)
+
+  const [existing] = await db
+    .select()
+    .from(userPreferences)
+    .where(eq(userPreferences.userId, user.id))
+    .limit(1)
+
+  if (existing) {
+    const [updated] = await db
+      .update(userPreferences)
+      .set({
+        dailyCalorieGoal: nextPreferences.dailyCalorieGoal,
+        proteinGoal: nextPreferences.proteinGoal,
+        carbsGoal: nextPreferences.carbsGoal,
+        fatGoal: nextPreferences.fatGoal,
+        fiberGoal: nextPreferences.fiberGoal,
+        theme: nextPreferences.theme,
+        notifications: nextPreferences.notifications,
+        units: nextPreferences.units,
+        language: nextPreferences.language,
+        updatedAt: new Date(),
+      })
+      .where(eq(userPreferences.userId, user.id))
+      .returning()
+
+    return {
+      dailyCalorieGoal: updated.dailyCalorieGoal ?? 2000,
+      proteinGoal: updated.proteinGoal ?? 120,
+      carbsGoal: updated.carbsGoal ?? 220,
+      fatGoal: updated.fatGoal ?? 70,
+      fiberGoal: updated.fiberGoal ?? 30,
+      theme: updated.theme ?? 'light',
+      notifications: updated.notifications ?? true,
+      units: updated.units ?? 'metric',
+      language: updated.language ?? 'en',
+    }
+  }
+
+  const [created] = await db
+    .insert(userPreferences)
+    .values({
+      userId: user.id,
+      dailyCalorieGoal: nextPreferences.dailyCalorieGoal,
+      proteinGoal: nextPreferences.proteinGoal,
+      carbsGoal: nextPreferences.carbsGoal,
+      fatGoal: nextPreferences.fatGoal,
+      fiberGoal: nextPreferences.fiberGoal,
+      theme: nextPreferences.theme,
+      notifications: nextPreferences.notifications,
+      units: nextPreferences.units,
+      language: nextPreferences.language,
+    })
+    .returning()
+
+  return {
+    dailyCalorieGoal: created.dailyCalorieGoal ?? 2000,
+    proteinGoal: created.proteinGoal ?? 120,
+    carbsGoal: created.carbsGoal ?? 220,
+    fatGoal: created.fatGoal ?? 70,
+    fiberGoal: created.fiberGoal ?? 30,
+    theme: created.theme ?? 'light',
+    notifications: created.notifications ?? true,
+    units: created.units ?? 'metric',
+    language: created.language ?? 'en',
+  }
+}
+
+export async function getWeeklyAnalytics(username: string): Promise<WeeklyAnalytics> {
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(startOfToday)
+    date.setDate(startOfToday.getDate() - (6 - index))
+    return date
+  })
+
+  if (!isDatabaseConnected || !db) {
+    return {
+      todayCalories: 0,
+      weeklyCalories: 0,
+      averageDailyCalories: 0,
+      weeklyXP: 0,
+      daysLogged: 0,
+      currentStreak: 0,
+      averageProtein: 0,
+      averageCarbs: 0,
+      averageFat: 0,
+      averageFiber: 0,
+      dailyBreakdown: lastSevenDays.map((date) => ({
+        date: date.toISOString(),
+        calories: 0,
+        xp: 0,
+        entries: 0,
+      })),
+      topMealType: 'No data yet',
+    }
+  }
+
+  const weekStart = new Date(startOfToday)
+  weekStart.setDate(startOfToday.getDate() - 6)
+
+  const entries = await db
+    .select()
+    .from(foodEntries)
+    .where(and(eq(foodEntries.username, username), sql`${foodEntries.createdAt} >= ${weekStart}`))
+    .orderBy(desc(foodEntries.createdAt))
+
+  const streakUser = await getUserByUsername(username)
+  let proteinTotal = 0
+  let carbsTotal = 0
+  let fatTotal = 0
+  let fiberTotal = 0
+
+  const dailyMap = new Map<string, { calories: number; xp: number; entries: number }>()
+  const mealCounts = new Map<string, number>()
+
+  for (const date of lastSevenDays) {
+    dailyMap.set(date.toDateString(), { calories: 0, xp: 0, entries: 0 })
+  }
+
+  for (const entry of entries) {
+    const entryDate = new Date(entry.createdAt).toDateString()
+    const current = dailyMap.get(entryDate)
+    if (current) {
+      current.calories += entry.calories || 0
+      current.xp += entry.xpEarned || 0
+      current.entries += 1
+    }
+
+    const mealType = entry.mealType || 'meal'
+    mealCounts.set(mealType, (mealCounts.get(mealType) || 0) + 1)
+
+    proteinTotal += parseNutrientValue(entry.nutrients?.protein)
+    carbsTotal += parseNutrientValue(entry.nutrients?.carbs)
+    fatTotal += parseNutrientValue(entry.nutrients?.fat)
+    fiberTotal += parseNutrientValue(entry.nutrients?.fiber)
+  }
+
+  const dailyBreakdown = lastSevenDays.map((date) => {
+    const values = dailyMap.get(date.toDateString()) || { calories: 0, xp: 0, entries: 0 }
+    return {
+      date: date.toISOString(),
+      calories: values.calories,
+      xp: values.xp,
+      entries: values.entries,
+    }
+  })
+
+  const weeklyCalories = dailyBreakdown.reduce((sum, day) => sum + day.calories, 0)
+  const weeklyXP = dailyBreakdown.reduce((sum, day) => sum + day.xp, 0)
+  const daysLogged = dailyBreakdown.filter((day) => day.entries > 0).length
+  const todayCalories = dailyBreakdown[dailyBreakdown.length - 1]?.calories || 0
+  const topMealTypeEntry = [...mealCounts.entries()].sort((a, b) => b[1] - a[1])[0]
+
+  return {
+    todayCalories,
+    weeklyCalories,
+    averageDailyCalories: Math.round(weeklyCalories / 7),
+    weeklyXP,
+    daysLogged,
+    currentStreak: streakUser?.streak || 0,
+    averageProtein: Math.round(proteinTotal / 7),
+    averageCarbs: Math.round(carbsTotal / 7),
+    averageFat: Math.round(fatTotal / 7),
+    averageFiber: Math.round(fiberTotal / 7),
+    dailyBreakdown,
+    topMealType: topMealTypeEntry ? topMealTypeEntry[0] : 'No data yet',
+  }
+}
+
+function parseNutrientValue(value: unknown) {
+  if (typeof value === 'number') {
+    return value
+  }
+
+  if (typeof value !== 'string') {
+    return 0
+  }
+
+  const parsed = Number.parseFloat(value.replace(/[^0-9.]/g, ''))
+  return Number.isFinite(parsed) ? parsed : 0
 }

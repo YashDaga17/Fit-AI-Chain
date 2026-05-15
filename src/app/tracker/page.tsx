@@ -1,629 +1,689 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Trophy, Zap, TrendingUp, Star, Award, Loader2, Heart, Target, Flame, BarChart3, AlertTriangle, Lightbulb, User, Activity, House, Clock, CheckCircle } from 'lucide-react'
+import { Camera, Flame, Loader2, Pencil, Plus, Search, Target, Trash2, UtensilsCrossed, X, Zap } from 'lucide-react'
+
+import Navigation from '@/components/Navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { getUserLevel, getXPProgress, calculateStreakMultiplier, getAchievements, FOOD_TRACKING_LEVELS } from '@/utils/levelingSystem'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
+import { useDailyGoal } from '@/hooks/useDailyGoal'
 import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
 import { useUserStats } from '@/hooks/useUserStats'
-import Navigation from '@/components/Navigation'
+import type { FoodEntry, FoodEntryFormValues } from '@/types/tracker'
+import { FOOD_TRACKING_LEVELS, getUserLevel, getXPProgress } from '@/utils/levelingSystem'
 
-interface FoodEntry {
-  id: string
-  image: string
-  food: string
-  calories: number
-  timestamp: number
-  xp: number
-  confidence?: string
-  cuisine?: string
-  portionSize?: string
-  ingredients?: string[]
-  cookingMethod?: string
-  nutrients?: {
-    protein: string
-    carbs: string
-    fat: string
-    fiber: string
-    sugar?: string
+const DEFAULT_FORM_VALUES: FoodEntryFormValues = {
+  food: '',
+  calories: '',
+  mealType: 'meal',
+  portionSize: '',
+  cuisine: '',
+  protein: '',
+  carbs: '',
+  fat: '',
+  fiber: '',
+}
+
+function createEmptyForm(): FoodEntryFormValues {
+  return { ...DEFAULT_FORM_VALUES }
+}
+
+function formFromEntry(entry: FoodEntry): FoodEntryFormValues {
+  return {
+    food: entry.food,
+    calories: String(entry.calories),
+    mealType: entry.mealType || 'meal',
+    portionSize: entry.portionSize || '',
+    cuisine: entry.cuisine || '',
+    protein: entry.nutrients?.protein || '',
+    carbs: entry.nutrients?.carbs || '',
+    fat: entry.nutrients?.fat || '',
+    fiber: entry.nutrients?.fiber || '',
   }
-  healthScore?: string
-  allergens?: string[]
-  alternatives?: string
 }
 
-interface UserStats {
-  totalCalories: number
-  totalXP: number
-  streak: number
-  level: number
-  rank: number
+function formatMealType(mealType?: string) {
+  if (!mealType) {
+    return 'Meal'
+  }
+
+  return mealType.charAt(0).toUpperCase() + mealType.slice(1)
 }
+
+const mealFilterOptions = ['all', 'breakfast', 'lunch', 'dinner', 'snack', 'meal'] as const
 
 export default function TrackerPage() {
-  
   const router = useRouter()
   const { isAuthenticated, username, isLoading } = useAuth()
-  const { isAnalyzing, error: analysisError, analyzeFood, getFoodEntries, clearError } = useFoodAnalysis()
   const { userStats, refreshData } = useUserStats(username)
+  const { dailyGoal, setDailyGoal } = useDailyGoal(username)
+  const {
+    isAnalyzing,
+    error: analysisError,
+    analyzeFood,
+    getFoodEntries,
+    createManualEntry,
+    updateFoodEntry,
+    deleteFoodEntry,
+    clearError,
+  } = useFoodAnalysis()
+
+  const [mounted, setMounted] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([])
-  const [mounted, setMounted] = useState(false)
-
+  const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false)
+  const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false)
+  const [isSavingEntry, setIsSavingEntry] = useState(false)
+  const [entryForm, setEntryForm] = useState<FoodEntryFormValues>(createEmptyForm())
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
+  const [goalDraft, setGoalDraft] = useState(String(dailyGoal))
+  const [searchQuery, setSearchQuery] = useState('')
+  const [mealFilter, setMealFilter] = useState<(typeof mealFilterOptions)[number]>('all')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    // Don't redirect while auth is still loading
+    setGoalDraft(String(dailyGoal))
+  }, [dailyGoal])
+
+  const loadFoodEntries = useCallback(async () => {
+    if (!username) {
+      return
+    }
+
+    const entries = await getFoodEntries(username)
+    setFoodEntries(entries)
+  }, [getFoodEntries, username])
+
+  useEffect(() => {
     if (isLoading) {
       return
     }
-    
+
     if (!isAuthenticated || !username) {
       router.push('/')
       return
     }
 
     loadFoodEntries()
-  }, [isAuthenticated, username, isLoading, router])
+  }, [isAuthenticated, isLoading, loadFoodEntries, router, username])
 
-  const loadFoodEntries = useCallback(async () => {
-    if (!username) return
+  const todaysEntries = useMemo(() => {
+    const today = new Date().toDateString()
+    return foodEntries.filter((entry) => new Date(entry.timestamp).toDateString() === today)
+  }, [foodEntries])
 
-    try {
-      const entries = await getFoodEntries(username)
-      setFoodEntries(entries)
-    } catch (error) {
-      // Handle error silently or show user-friendly message
-    }
-  }, [username, getFoodEntries])
+  const todaysCalories = useMemo(() => todaysEntries.reduce((sum, entry) => sum + (entry.calories || 0), 0), [todaysEntries])
+  const todaysXP = useMemo(() => todaysEntries.reduce((sum, entry) => sum + (entry.xp || 0), 0), [todaysEntries])
+  const filteredEntries = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+
+    return foodEntries.filter((entry) => {
+      const matchesMealType = mealFilter === 'all' || (entry.mealType || 'meal') === mealFilter
+      const haystack = [
+        entry.food,
+        entry.cuisine,
+        entry.portionSize,
+        entry.cookingMethod,
+        ...(entry.ingredients || []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      const matchesQuery = !normalizedQuery || haystack.includes(normalizedQuery)
+      return matchesMealType && matchesQuery
+    })
+  }, [foodEntries, mealFilter, searchQuery])
+
+  const filteredCalories = useMemo(
+    () => filteredEntries.reduce((sum, entry) => sum + (entry.calories || 0), 0),
+    [filteredEntries]
+  )
+  const calorieProgress = Math.min(Math.round((todaysCalories / dailyGoal) * 100), 100)
+  const remainingCalories = Math.max(dailyGoal - todaysCalories, 0)
+  const levelInfo = mounted && userStats ? getUserLevel(userStats.totalXP || 0) : FOOD_TRACKING_LEVELS[0]
+  const xpProgress = mounted && userStats
+    ? getXPProgress(userStats.totalXP || 0)
+    : {
+        currentLevel: FOOD_TRACKING_LEVELS[0],
+        nextLevel: FOOD_TRACKING_LEVELS[1],
+        progressXP: 0,
+        neededXP: 500,
+        progressPercentage: 0,
+      }
+
+  const updateFormField = <K extends keyof FoodEntryFormValues>(field: K, value: FoodEntryFormValues[K]) => {
+    setEntryForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const openCreateDialog = () => {
+    setEditingEntryId(null)
+    setEntryForm(createEmptyForm())
+    setIsEntryDialogOpen(true)
+  }
+
+  const openEditDialog = (entry: FoodEntry) => {
+    setEditingEntryId(entry.id)
+    setEntryForm(formFromEntry(entry))
+    setIsEntryDialogOpen(true)
+  }
+
+  const resetEntryDialog = () => {
+    setEditingEntryId(null)
+    setEntryForm(createEmptyForm())
+    setIsEntryDialogOpen(false)
+  }
+
+  const refreshTrackerData = async () => {
+    await Promise.all([loadFoodEntries(), Promise.resolve(refreshData())])
+  }
 
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const imageData = e.target?.result as string
-        setSelectedImage(imageData)
-        
-        const newEntry = await analyzeFood(imageData)
-        if (newEntry) {
-          setFoodEntries(prev => [newEntry, ...prev])
-          refreshData() // Refresh user stats
-          setSelectedImage(null)
-        }
-      }
-      reader.readAsDataURL(file)
+    if (!file) {
+      return
     }
+
+    const reader = new FileReader()
+    reader.onload = async (loadEvent) => {
+      const imageData = loadEvent.target?.result as string
+      setSelectedImage(imageData)
+
+      const newEntry = await analyzeFood(imageData)
+      if (newEntry) {
+        setFoodEntries((current) => [newEntry, ...current])
+        refreshData()
+      }
+
+      setSelectedImage(null)
+      event.target.value = ''
+    }
+
+    reader.readAsDataURL(file)
   }, [analyzeFood, refreshData])
 
+  const handleSaveEntry = async () => {
+    const calories = Number.parseInt(entryForm.calories, 10)
+    if (!entryForm.food.trim() || !Number.isFinite(calories) || calories <= 0) {
+      return
+    }
 
-  const todaysCalories = foodEntries
-    .filter(entry => {
-      const today = new Date().toDateString()
-      const entryDate = new Date(entry.timestamp).toDateString()
-      return today === entryDate
-    })
-    .reduce((sum, entry) => {
-      const calories = typeof entry.calories === 'number' ? entry.calories : 0
-      return sum + calories
-    }, 0)
+    setIsSavingEntry(true)
 
-  // Get level information for display (only after mounting)
-  const levelInfo = mounted && userStats ? getUserLevel(userStats.totalXP || 0) : FOOD_TRACKING_LEVELS[0]
-  const xpProgress = mounted && userStats ? getXPProgress(userStats.totalXP || 0) : {
-    currentLevel: FOOD_TRACKING_LEVELS[0],
-    nextLevel: FOOD_TRACKING_LEVELS[1],
-    progressXP: 0,
-    neededXP: 500,
-    progressPercentage: 0
+    const payload = {
+      food: entryForm.food.trim(),
+      calories,
+      mealType: entryForm.mealType,
+      portionSize: entryForm.portionSize.trim() || undefined,
+      cuisine: entryForm.cuisine.trim() || undefined,
+      nutrients: {
+        protein: entryForm.protein.trim() || '0g',
+        carbs: entryForm.carbs.trim() || '0g',
+        fat: entryForm.fat.trim() || '0g',
+        fiber: entryForm.fiber.trim() || '0g',
+      },
+      xp: Math.max(10, Math.round(calories / 4)),
+      image: '/placeholder-food.jpg',
+      confidence: 'manual',
+    }
+
+    const savedEntry = editingEntryId
+      ? await updateFoodEntry(editingEntryId, payload)
+      : await createManualEntry(payload)
+
+    if (savedEntry) {
+      await refreshTrackerData()
+      resetEntryDialog()
+    }
+
+    setIsSavingEntry(false)
   }
-  const achievements = mounted && userStats ? getAchievements(userStats.totalXP || 0, userStats.streak || 1, foodEntries.length) : []
 
-  // Show loading while authentication is being checked
+  const handleDeleteEntry = async (entry: FoodEntry) => {
+    const confirmed = window.confirm(`Delete "${entry.food}" from your log?`)
+    if (!confirmed) {
+      return
+    }
+
+    const deleted = await deleteFoodEntry(entry.id)
+    if (deleted) {
+      setFoodEntries((current) => current.filter((item) => item.id !== entry.id))
+      refreshData()
+    }
+  }
+
+  const handleSaveGoal = async () => {
+    const parsedGoal = Number.parseInt(goalDraft, 10)
+    await setDailyGoal(parsedGoal)
+    setIsGoalDialogOpen(false)
+  }
+
   if (isLoading || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">🍎</span>
+          <div className="w-14 h-14 bg-orange-200 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <UtensilsCrossed className="w-7 h-7 text-orange-700" />
           </div>
-          <p className="text-orange-600">
-            {isLoading ? 'Checking authentication...' : 'Loading Fit AI Chain...'}
-          </p>
+          <p className="text-orange-700">{isLoading ? 'Checking authentication...' : 'Loading tracker...'}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      {/* Modern Header */}
-      <div className="bg-white/80 backdrop-blur-xl border-b border-white/20 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">🍎</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Fit AI Chain</h1>
-                <div className="flex items-center space-x-2">
-                  <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs px-2 py-0.5">
-                    {levelInfo.badge} Lv.{levelInfo.level}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <div className="text-sm font-semibold text-gray-900">{(userStats?.totalXP || 0).toLocaleString()}</div>
-                <div className="text-xs text-gray-500">XP</div>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-red-100 rounded-xl flex items-center justify-center">
-                <Flame className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.24),_transparent_40%),linear-gradient(180deg,_#fff7ed_0%,_#fff1f2_100%)]">
+      <div className="sticky top-0 z-30 border-b border-orange-100 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+          <div>
+            <p className="text-sm font-medium text-orange-600">Daily nutrition cockpit</p>
+            <h1 className="text-2xl font-bold text-slate-900">Food Tracker</h1>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-slate-500">{username}</p>
+            <p className="text-lg font-semibold text-slate-900">{(userStats?.totalXP || 0).toLocaleString()} XP</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-32 pt-6 space-y-6">
-        {/* Today's Progress Card */}
-        <Card className="bg-gradient-to-br from-white to-orange-50/50 border-0 shadow-xl rounded-3xl overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-1">Today's Progress</h2>
-                <p className="text-sm text-gray-600">Keep up the great work!</p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center">
-                <Target className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white/70 rounded-2xl p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600 mb-1">
-                  {isNaN(todaysCalories) ? 0 : todaysCalories}
-                </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Calories</div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {2000 - (isNaN(todaysCalories) ? 0 : todaysCalories)} left
-                </div>
-              </div>
-              <div className="bg-white/70 rounded-2xl p-4 text-center">
-                <div className="text-2xl font-bold text-red-600 mb-1">
-                  {userStats?.streak || 1}
-                </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Day Streak</div>
-                <div className="text-xs text-gray-400 mt-1 flex items-center justify-center">
-                  <Flame className="w-3 h-3 text-orange-500 mr-1" />
-                  On fire!
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-700">Daily Goal Progress</span>
-                <span className="font-medium text-gray-900">
-                  {Math.round(((isNaN(todaysCalories) ? 0 : todaysCalories) / 2000) * 100)}%
-                </span>
-              </div>
-              <Progress 
-                value={((isNaN(todaysCalories) ? 0 : todaysCalories) / 2000) * 100} 
-                className="h-2 bg-gray-100 rounded-full overflow-hidden"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Error Display */}
+      <main className="mx-auto max-w-6xl space-y-6 px-4 pb-32 pt-6 sm:px-6">
         {analysisError && (
-          <Card className="bg-red-50 border-red-200">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <p className="text-red-700">{analysisError}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearError}
-                  className="ml-auto"
-                >
-                  Dismiss
-                </Button>
-              </div>
+          <Card className="border-red-200 bg-red-50 shadow-sm">
+            <CardContent className="flex items-center justify-between gap-3 p-4">
+              <p className="text-sm text-red-700">{analysisError}</p>
+              <Button variant="outline" size="sm" onClick={clearError}>Dismiss</Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Camera Upload Card */}
-        <Card className="bg-gradient-to-br from-orange-500 to-red-600 border-0 shadow-xl rounded-3xl overflow-hidden text-white">
-          <CardContent className="p-0">
-            <label className="cursor-pointer block">
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={isAnalyzing}
-              />
-              
-              {selectedImage ? (
-                <div className="relative">
-                  <img 
-                    src={selectedImage} 
-                    alt="Selected food" 
-                    className="w-full h-64 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                        <Camera className="w-8 h-8 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Analyzing Food...</h3>
-                      <p className="text-white/80">Getting nutritional info with AI</p>
-                    </div>
-                  </div>
+        <section className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
+          <Card className="overflow-hidden border-0 bg-white shadow-xl">
+            <CardContent className="space-y-5 p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-600">Today</p>
+                  <h2 className="text-3xl font-bold text-slate-900">{todaysCalories} cal</h2>
+                  <p className="text-sm text-slate-500">{remainingCalories} calories remaining from your {dailyGoal} goal</p>
                 </div>
-              ) : (
-                <div className="p-8 text-center">
-                  {isAnalyzing ? (
-                    <div>
-                      <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-white" />
-                      <h3 className="text-xl font-bold mb-2">Analyzing Food...</h3>
-                      <p className="text-white/80">Using AI to identify calories and nutrition</p>
+                <Button variant="outline" size="sm" onClick={() => setIsGoalDialogOpen(true)}>
+                  <Target className="w-4 h-4" />
+                  Edit Goal
+                </Button>
+              </div>
+
+              <Progress value={calorieProgress} className="h-3 bg-orange-100" />
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-orange-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-orange-600">Meals Logged</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{todaysEntries.length}</p>
+                </div>
+                <div className="rounded-2xl bg-red-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-red-600">XP Today</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{todaysXP}</p>
+                </div>
+                <div className="rounded-2xl bg-amber-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-amber-600">Streak</p>
+                  <p className="mt-2 flex items-center gap-2 text-2xl font-bold text-slate-900">
+                    <Flame className="w-5 h-5 text-orange-500" />
+                    {userStats?.streak || 1}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-xl">
+            <CardContent className="space-y-4 p-6">
+              <div>
+                <p className="text-sm text-white/80">Level Progress</p>
+                <h3 className="text-2xl font-bold">{levelInfo.title}</h3>
+                <p className="text-sm text-white/80">{levelInfo.badge} • Level {levelInfo.level}</p>
+              </div>
+              <Progress value={xpProgress.progressPercentage} className="h-3 bg-white/20" />
+              <p className="text-sm text-white/90">
+                {xpProgress.progressXP.toLocaleString()} XP in this level
+                {xpProgress.nextLevel ? ` • ${xpProgress.neededXP.toLocaleString()} XP to ${xpProgress.nextLevel.title}` : ''}
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-0 bg-white shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <Camera className="w-5 h-5 text-orange-500" />
+                AI Food Scan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-orange-200 bg-orange-50/70 px-6 py-10 text-center transition hover:border-orange-300 hover:bg-orange-50">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={isAnalyzing}
+                />
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mb-3 h-10 w-10 animate-spin text-orange-500" />
+                    <p className="font-semibold text-slate-900">Analyzing your meal...</p>
+                    <p className="text-sm text-slate-500">We’re estimating calories, nutrients, and XP.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-3 rounded-3xl bg-white p-4 shadow-sm">
+                      <Camera className="h-8 w-8 text-orange-500" />
                     </div>
-                  ) : (
-                    <div>
-                      <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
-                        <Camera className="w-10 h-10 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold mb-3">Snap Your Food</h3>
-                      <p className="text-white/90 text-lg mb-6">
-                        Take a photo and get instant AI analysis
-                      </p>
-                      
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-                          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <Zap className="w-4 h-4" />
-                          </div>
-                          <div className="text-xs font-medium">Instant</div>
-                        </div>
-                        <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-                          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <Heart className="w-4 h-4" />
-                          </div>
-                          <div className="text-xs font-medium">Accurate</div>
-                        </div>
-                        <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-                          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <Star className="w-4 h-4" />
-                          </div>
-                          <div className="text-xs font-medium">Earn XP</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    <p className="font-semibold text-slate-900">Take a food photo</p>
+                    <p className="text-sm text-slate-500">Use AI to log a meal from your camera in one tap.</p>
+                  </>
+                )}
+              </label>
+
+              {selectedImage && (
+                <div className="overflow-hidden rounded-2xl border border-orange-100">
+                  <img src={selectedImage} alt="Selected food preview" className="h-44 w-full object-cover" />
                 </div>
               )}
-            </label>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Recent Food Entries - Enhanced Detailed Cards */}
-        {foodEntries.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Recent Meals</h2>
-              <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
-                {foodEntries.length} tracked
-              </Badge>
+          <Card className="border-0 bg-white shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <Plus className="w-5 h-5 text-orange-500" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="h-12 w-full justify-start rounded-2xl bg-slate-900 text-white hover:bg-slate-800" onClick={openCreateDialog}>
+                <Plus className="w-4 h-4" />
+                Add meal manually
+              </Button>
+              <Button variant="outline" className="h-12 w-full justify-start rounded-2xl" onClick={() => setIsGoalDialogOpen(true)}>
+                <Target className="w-4 h-4" />
+                Update daily goal
+              </Button>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-900">Today’s focus</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Manual logging, edit/delete controls, and goal tracking are now built into the tracker so you’re not blocked on AI scans.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Recent Meals</h2>
+              <p className="text-sm text-slate-500">Search, filter, and manage your meal history.</p>
             </div>
-            
-            <div className="space-y-4">
-              {foodEntries.slice(0, 5).map((entry) => (
-                <Card key={entry.id} className="bg-white border-0 shadow-xl rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] card-hover">
-                  <CardContent className="p-0">
-                    {/* Food Image Header */}
-                    <div className="relative h-48 sm:h-56 bg-gradient-to-br from-orange-100 to-red-100">
-                      {entry.image ? (
-                        <img 
-                          src={entry.image} 
-                          alt={entry.food}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent) {
-                              parent.innerHTML = `
-                                <div class="w-full h-full flex items-center justify-center">
-                                  <div class="text-center">
-                                    <div class="text-6xl mb-2">🍽️</div>
-                                    <p class="text-gray-600 font-medium">${entry.food}</p>
-                                  </div>
-                                </div>
-                              `
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="text-6xl mb-2">🍽️</div>
-                            <p className="text-gray-600 font-medium">{entry.food}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Overlay Gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                      
-                      {/* Calorie Badge - Top Right */}
-                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-orange-600">
-                            {typeof entry.calories === 'number' && !isNaN(entry.calories) ? entry.calories : 0}
-                          </div>
-                          <div className="text-xs uppercase tracking-wide text-gray-600 font-medium">cal</div>
-                        </div>
-                      </div>
+            <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">{foodEntries.length} total</Badge>
+          </div>
 
-                      {/* Health Score Badge - Top Left */}
-                      {entry.healthScore && (
-                        <div className="absolute top-3 left-3 bg-emerald-500/95 backdrop-blur-sm rounded-xl px-3 py-2 text-white shadow-lg">
-                          <div className="flex items-center space-x-1">
-                            <div className="text-sm font-bold">{entry.healthScore}</div>
-                            <div className="text-xs uppercase tracking-wide opacity-90 font-medium">/10</div>
-                          </div>
-                        </div>
-                      )}
+          <Card className="border-0 bg-white shadow-lg">
+            <CardContent className="space-y-4 p-5">
+              <div className="grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search by meal, ingredient, cuisine, or cooking method"
+                    className="rounded-2xl pl-9 pr-10"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
 
-                      {/* Confidence Indicator - Bottom Right */}
-                      {entry.confidence && (
-                        <div className="absolute bottom-4 right-4 flex items-center space-x-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            entry.confidence === 'high' ? 'bg-emerald-400' : 
-                            entry.confidence === 'medium' ? 'bg-amber-400' : 'bg-red-400'
-                          }`} />
-                          <span className="text-white text-xs font-medium capitalize bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
-                            {entry.confidence} confidence
-                          </span>
-                        </div>
-                      )}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
+                  {mealFilterOptions.map((option) => (
+                    <Button
+                      key={option}
+                      type="button"
+                      variant={mealFilter === option ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMealFilter(option)}
+                      className={`rounded-2xl ${mealFilter === option ? 'bg-orange-500 text-white hover:bg-orange-600' : ''}`}
+                    >
+                      {option === 'all' ? 'All' : formatMealType(option)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
-                      {/* Food Name Overlay - Bottom */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                        <h3 className="text-xl font-semibold leading-tight mb-2 drop-shadow-lg">
-                          {entry.food}
-                        </h3>
-                        {entry.cuisine && (
-                          <p className="text-white/90 text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full inline-block">
-                            {entry.cuisine} Cuisine
-                          </p>
-                        )}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Shown Meals</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{filteredEntries.length}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Shown Calories</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{filteredCalories}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Active Filter</p>
+                  <p className="mt-2 text-lg font-bold text-slate-900">{mealFilter === 'all' ? 'Everything' : formatMealType(mealFilter)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {foodEntries.length === 0 ? (
+            <Card className="border-0 bg-white shadow-lg">
+              <CardContent className="p-10 text-center">
+                <UtensilsCrossed className="mx-auto mb-4 h-10 w-10 text-orange-400" />
+                <h3 className="text-lg font-semibold text-slate-900">No meals logged yet</h3>
+                <p className="mt-2 text-sm text-slate-500">Start with a camera scan or add your first meal manually.</p>
+                <Button className="mt-4 rounded-2xl bg-orange-500 text-white hover:bg-orange-600" onClick={openCreateDialog}>
+                  Add first meal
+                </Button>
+              </CardContent>
+            </Card>
+          ) : filteredEntries.length === 0 ? (
+            <Card className="border-0 bg-white shadow-lg">
+              <CardContent className="p-10 text-center">
+                <Search className="mx-auto mb-4 h-10 w-10 text-slate-300" />
+                <h3 className="text-lg font-semibold text-slate-900">No meals match this filter</h3>
+                <p className="mt-2 text-sm text-slate-500">Try a different search term or switch the meal filter back to all.</p>
+                <Button variant="outline" className="mt-4 rounded-2xl" onClick={() => {
+                  setSearchQuery('')
+                  setMealFilter('all')
+                }}>
+                  Clear filters
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {filteredEntries.slice(0, 8).map((entry) => (
+                <Card key={entry.id} className="overflow-hidden border-0 bg-white shadow-lg">
+                  <div className="flex h-full flex-col">
+                    <div className="relative h-44 bg-gradient-to-br from-orange-100 to-red-100">
+                      <img src={entry.image || '/placeholder-food.jpg'} alt={entry.food} className="h-full w-full object-cover" />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                        <p className="text-lg font-semibold text-white">{entry.food}</p>
+                        <p className="text-sm text-white/80">{new Date(entry.timestamp).toLocaleString()}</p>
                       </div>
                     </div>
-                    
-                    {/* Content Section */}
-                    <div className="p-6 space-y-6">
-                      {/* Key Info Badges */}
+
+                    <CardContent className="flex flex-1 flex-col gap-4 p-5">
                       <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-gradient-to-r from-red-100 to-orange-100 text-red-700 border-red-200 text-sm px-3 py-1 rounded-xl">
-                          <Zap className="w-4 h-4 mr-2" />
-                          +{typeof entry.xp === 'number' && !isNaN(entry.xp) ? entry.xp : 0} XP
+                        <Badge variant="outline">{formatMealType(entry.mealType)}</Badge>
+                        <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">{entry.calories} cal</Badge>
+                        <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                          <Zap className="mr-1 h-3 w-3" />
+                          {entry.xp} XP
                         </Badge>
-                        {entry.portionSize && (
-                          <Badge variant="outline" className="text-sm border-orange-300 text-orange-700 px-3 py-1 rounded-xl bg-orange-50">
-                            <BarChart3 className="w-3 h-3 mr-1" />
-                            {entry.portionSize}
-                          </Badge>
-                        )}
-                        {entry.cookingMethod && (
-                          <Badge variant="outline" className="text-sm border-red-300 text-red-700 px-3 py-1 rounded-xl bg-red-50">
-                            <Flame className="w-3 h-3 mr-1" />
-                            {entry.cookingMethod}
-                          </Badge>
-                        )}
                       </div>
 
-                      {/* Health Tip - First Priority */}
-                      {entry.alternatives && (
-                        <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Lightbulb className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-emerald-800 mb-2">Health Tip</h4>
-                              <p className="text-emerald-700 text-sm leading-relaxed">
-                                {entry.alternatives}
-                              </p>
-                            </div>
-                          </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm text-slate-600">
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <p className="text-xs uppercase tracking-wide text-slate-400">Cuisine</p>
+                          <p className="mt-1 font-medium text-slate-900">{entry.cuisine || 'General'}</p>
                         </div>
-                      )}
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <p className="text-xs uppercase tracking-wide text-slate-400">Portion</p>
+                          <p className="mt-1 font-medium text-slate-900">{entry.portionSize || 'Standard'}</p>
+                        </div>
+                      </div>
 
-                      {/* Compact Nutrition Breakdown */}
                       {entry.nutrients && (
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-800 flex items-center text-sm">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></div>
-                            Nutrition Facts
-                          </h4>
-                          
-                          {/* Compact Vertical List Style Nutrition Card */}
-                          <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-3 border border-orange-200">
-                            <div className="space-y-0 divide-y divide-orange-200/50">
-                              <div className="flex justify-between items-center py-2 first:pt-0">
-                                <span className="text-xs font-medium text-orange-700">Protein</span>
-                                <span className="text-sm font-bold text-orange-600">{entry.nutrients.protein}</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-xs font-medium text-red-700">Carbs</span>
-                                <span className="text-sm font-bold text-red-600">{entry.nutrients.carbs}</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-xs font-medium text-orange-700">Fat</span>
-                                <span className="text-sm font-bold text-orange-600">{entry.nutrients.fat}</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-xs font-medium text-red-700">Fiber</span>
-                                <span className="text-sm font-bold text-red-600">{entry.nutrients.fiber}</span>
-                              </div>
-                              {entry.nutrients.sugar && (
-                                <div className="flex justify-between items-center py-2 last:pb-0">
-                                  <span className="text-xs font-medium text-red-700">Sugar</span>
-                                  <span className="text-sm font-bold text-red-600">{entry.nutrients.sugar}</span>
-                                </div>
-                              )}
-                            </div>
+                        <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                          <div className="rounded-2xl bg-orange-50 p-2">
+                            <p className="text-slate-500">Protein</p>
+                            <p className="mt-1 font-semibold text-slate-900">{entry.nutrients.protein}</p>
+                          </div>
+                          <div className="rounded-2xl bg-orange-50 p-2">
+                            <p className="text-slate-500">Carbs</p>
+                            <p className="mt-1 font-semibold text-slate-900">{entry.nutrients.carbs}</p>
+                          </div>
+                          <div className="rounded-2xl bg-orange-50 p-2">
+                            <p className="text-slate-500">Fat</p>
+                            <p className="mt-1 font-semibold text-slate-900">{entry.nutrients.fat}</p>
+                          </div>
+                          <div className="rounded-2xl bg-orange-50 p-2">
+                            <p className="text-slate-500">Fiber</p>
+                            <p className="mt-1 font-semibold text-slate-900">{entry.nutrients.fiber}</p>
                           </div>
                         </div>
                       )}
 
-                      {/* Allergen Warning */}
-                      {entry.allergens && entry.allergens.length > 0 && (
-                        <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <AlertTriangle className="w-4 h-4 text-red-600" />
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-red-800 mb-2">Allergen Alert</h4>
-                              <p className="text-red-700 text-sm leading-relaxed">
-                                <span className="font-medium">Contains:</span> {entry.allergens.join(', ')}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Ingredients List */}
-                      {entry.ingredients && entry.ingredients.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 flex items-center">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
-                            Key Ingredients
-                          </h4>
-                          <div className="flex flex-wrap gap-2">
-                            {entry.ingredients.slice(0, 8).map((ingredient, index) => (
-                              <span 
-                                key={index}
-                                className="bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 px-3 py-2 rounded-xl text-sm font-medium border border-emerald-200"
-                              >
-                                {ingredient}
-                              </span>
-                            ))}
-                            {entry.ingredients.length > 8 && (
-                              <span className="bg-orange-50 text-orange-600 px-3 py-2 rounded-xl text-sm border border-orange-200">
-                                +{entry.ingredients.length - 8} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Timestamp and Additional Info */}
-                      <div className="pt-4 border-t border-gray-100">
-                        <div className="text-xs text-gray-500 flex items-center justify-between">
-                          <span className="flex items-center">
-                            <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-2"></div>
-                            {new Date(entry.timestamp).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                          {entry.confidence && (
-                            <span className="flex items-center">
-                              <div className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                                entry.confidence === 'high' ? 'bg-emerald-400' : 
-                                entry.confidence === 'medium' ? 'bg-amber-400' : 'bg-red-400'
-                              }`}></div>
-                              AI Analysis
-                            </span>
-                          )}
-                        </div>
+                      <div className="mt-auto flex gap-2">
+                        <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => openEditDialog(entry)}>
+                          <Pencil className="w-4 h-4" />
+                          Edit
+                        </Button>
+                        <Button variant="destructive" className="flex-1 rounded-2xl" onClick={() => handleDeleteEntry(entry)}>
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </Button>
                       </div>
-                    </div>
-                  </CardContent>
+                    </CardContent>
+                  </div>
                 </Card>
               ))}
             </div>
+          )}
+        </section>
+      </main>
+
+      <Dialog open={isEntryDialogOpen} onOpenChange={(open) => (open ? setIsEntryDialogOpen(true) : resetEntryDialog())}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingEntryId ? 'Edit meal' : 'Add manual meal'}</DialogTitle>
+            <DialogDescription>
+              Keep your log accurate even when you don’t want to use the camera flow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-slate-700">Food name</label>
+              <Input value={entryForm.food} onChange={(event) => updateFormField('food', event.target.value)} placeholder="Grilled chicken bowl" />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-700">Calories</label>
+                <Input type="number" min="0" value={entryForm.calories} onChange={(event) => updateFormField('calories', event.target.value)} placeholder="540" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-700">Meal type</label>
+                <select
+                  value={entryForm.mealType}
+                  onChange={(event) => updateFormField('mealType', event.target.value)}
+                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-orange-400"
+                >
+                  <option value="meal">Meal</option>
+                  <option value="breakfast">Breakfast</option>
+                  <option value="lunch">Lunch</option>
+                  <option value="dinner">Dinner</option>
+                  <option value="snack">Snack</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-700">Portion size</label>
+                <Input value={entryForm.portionSize} onChange={(event) => updateFormField('portionSize', event.target.value)} placeholder="1 bowl" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-700">Cuisine</label>
+                <Input value={entryForm.cuisine} onChange={(event) => updateFormField('cuisine', event.target.value)} placeholder="Indian" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-4">
+              <div className="grid gap-2">
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Protein</label>
+                <Input value={entryForm.protein} onChange={(event) => updateFormField('protein', event.target.value)} placeholder="30g" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Carbs</label>
+                <Input value={entryForm.carbs} onChange={(event) => updateFormField('carbs', event.target.value)} placeholder="45g" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Fat</label>
+                <Input value={entryForm.fat} onChange={(event) => updateFormField('fat', event.target.value)} placeholder="18g" />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Fiber</label>
+                <Input value={entryForm.fiber} onChange={(event) => updateFormField('fiber', event.target.value)} placeholder="8g" />
+              </div>
+            </div>
           </div>
-        )}
 
-        {foodEntries.length === 0 && (
-          <Card className="bg-white/60 border-0 shadow-lg rounded-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Camera className="w-8 h-8 text-orange-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No meals tracked yet</h3>
-              <p className="text-gray-600 mb-4">Start your health journey by taking a photo of your food!</p>
-              <Button 
-                onClick={() => {
-                  const input = document.querySelector('input[type="file"]') as HTMLInputElement
-                  input?.click()
-                }}
-                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-xl px-6 py-2"
-              >
-                Take First Photo
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          <DialogFooter>
+            <Button variant="outline" onClick={resetEntryDialog}>Cancel</Button>
+            <Button className="bg-orange-500 text-white hover:bg-orange-600" onClick={handleSaveEntry} disabled={isSavingEntry}>
+              {isSavingEntry ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {editingEntryId ? 'Save changes' : 'Add meal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Level Progress */}
-        {mounted && (
-          <Card className="bg-gradient-to-br from-orange-500 to-red-600 border-0 shadow-xl rounded-2xl text-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">{levelInfo.title}</h3>
-                  <p className="text-white/80 text-sm">{levelInfo.description}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">Level {levelInfo.level}</div>
-                  <div className="text-white/80 text-sm">{levelInfo.badge}</div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>XP Progress</span>
-                  <span>{xpProgress.progressXP.toLocaleString()} / {(levelInfo.maxXP === Infinity ? 'MAX' : levelInfo.maxXP.toLocaleString())}</span>
-                </div>
-                <Progress value={xpProgress.progressPercentage} className="h-2 bg-white/20" />
-                {xpProgress.nextLevel && (
-                  <p className="text-white/80 text-xs flex items-center">
-                    <Target className="w-3 h-3 mr-1" />
-                    {xpProgress.neededXP.toLocaleString()} XP to reach {xpProgress.nextLevel.title}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set daily calorie goal</DialogTitle>
+            <DialogDescription>Choose a target that matches your current nutrition plan.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-slate-700">Calories per day</label>
+            <Input type="number" min="500" max="10000" value={goalDraft} onChange={(event) => setGoalDraft(event.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGoalDialogOpen(false)}>Cancel</Button>
+            <Button className="bg-orange-500 text-white hover:bg-orange-600" onClick={handleSaveGoal}>Save goal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Floating Action Button */}
       <div className="fixed bottom-24 right-6 z-20">
         <label className="cursor-pointer">
           <input
@@ -634,17 +694,12 @@ export default function TrackerPage() {
             className="hidden"
             disabled={isAnalyzing}
           />
-          <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl shadow-2xl flex items-center justify-center hover:shadow-3xl hover:scale-110 transition-all duration-300 active:scale-95">
-            {isAnalyzing ? (
-              <Loader2 className="h-7 w-7 text-white animate-spin" />
-            ) : (
-              <Camera className="h-7 w-7 text-white" />
-            )}
+          <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-2xl transition hover:scale-105">
+            {isAnalyzing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
           </div>
         </label>
       </div>
 
-      {/* Bottom Navigation */}
       <Navigation />
     </div>
   )

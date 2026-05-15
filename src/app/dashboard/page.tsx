@@ -1,274 +1,300 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trophy, Zap, TrendingUp, Star, Flame, Target, Activity, Award, Camera, Users } from 'lucide-react'
+import { ArrowRight, BarChart3, Camera, Flame, Sparkles, Target, Trophy, Zap } from 'lucide-react'
+
+import Navigation from '@/components/Navigation'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
 import { useAuth } from '@/hooks/useAuth'
+import { useDailyGoal } from '@/hooks/useDailyGoal'
 import { useUserStats } from '@/hooks/useUserStats'
-import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
-import Navigation from '@/components/Navigation'
-
-interface UserStats {
-  totalCalories: number
-  totalXP: number
-  streak: number
-  level: number
-  rank: number
-  username: string
-}
-
-interface LeaderboardEntry {
-  username: string
-  totalXP: number
-  level: number
-  rank: number
-}
+import { useWeeklyAnalytics } from '@/hooks/useWeeklyAnalytics'
+import { getDailyTip, getMotivationalMessage, generateInsights } from '@/utils/tipsAndInsights'
+import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
 
 export default function DashboardPage() {
   const router = useRouter()
   const { isAuthenticated, username, isLoading } = useAuth()
   const { userStats, leaderboard, loading } = useUserStats(username)
-  const { getFoodEntries } = useFoodAnalysis()
-  const [todayCalories, setTodayCalories] = useState(0)
-  const [weeklyCalories, setWeeklyCalories] = useState(0)
+  const { dailyGoal } = useDailyGoal(username)
+  const { analytics, loading: analyticsLoading } = useWeeklyAnalytics(username)
 
   useEffect(() => {
-    // Don't redirect while auth is still loading
-    if (isLoading) return
-    
-    if (!isAuthenticated || !username) {
-      router.push('/')
+    if (isLoading) {
       return
     }
 
-    loadCalorieData()
-  }, [isAuthenticated, username, isLoading, router])
-
-  // Show loading while authentication is being checked
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-orange-600">Checking authentication...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const loadCalorieData = async () => {
-    if (!username) return
-
-    try {
-      const entries = await getFoodEntries(username)
-      
-      const now = new Date()
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).getTime()
-      
-      let todayCals = 0
-      let weeklyCals = 0
-      
-      entries.forEach((entry: any) => {
-        const logTime = new Date(entry.timestamp).getTime()
-        if (logTime >= todayStart) {
-          todayCals += entry.calories || 0
-        }
-        if (logTime >= weekStart) {
-          weeklyCals += entry.calories || 0
-        }
-      })
-      
-      setTodayCalories(todayCals)
-      setWeeklyCalories(weeklyCals)
-    } catch (error) {
-      // Handle error silently
+    if (!isAuthenticated || !username) {
+      router.push('/')
     }
-  }
+  }, [isAuthenticated, isLoading, router, username])
 
-  const levelInfo = userStats ? getUserLevel(userStats.totalXP) : { level: 1, title: 'Beginner', badge: '🥉' }
-  const progress = userStats ? getXPProgress(userStats.totalXP) : { progressXP: 0, neededXP: 500, progressPercentage: 0 }
+  const levelInfo = userStats ? getUserLevel(userStats.totalXP || 0) : { level: 1, title: 'Beginner', badge: 'Starter' }
+  const levelProgress = userStats
+    ? getXPProgress(userStats.totalXP || 0)
+    : { progressXP: 0, neededXP: 500, progressPercentage: 0, nextLevel: null }
 
-  if (loading) {
+  const calorieProgress = Math.min(Math.round((analytics.todayCalories / dailyGoal) * 100), 100)
+  const remainingCalories = Math.max(dailyGoal - analytics.todayCalories, 0)
+  const dailyTip = getDailyTip()
+  const motivationalMessage = getMotivationalMessage()
+
+  const insightCards = useMemo(() => generateInsights({
+    avgCalories: analytics.averageDailyCalories,
+    avgProtein: 90,
+    avgCarbs: 180,
+    avgFat: 65,
+    daysLogged: analytics.daysLogged,
+  }, {
+    calories: dailyGoal,
+    protein: 120,
+  }), [analytics.averageDailyCalories, analytics.daysLogged, dailyGoal])
+
+  if (isLoading || loading || analyticsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-orange-600" />
+          <p className="text-sm text-slate-600">Loading your dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-b-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Welcome back! 👋</h1>
-            <p className="text-white/90">@{userStats?.username || 'User'}</p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.20),_transparent_35%),linear-gradient(180deg,_#fff7ed_0%,_#fff1f2_100%)] pb-24">
+      <div className="border-b border-orange-100 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">Overview</Badge>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900">Nutrition Dashboard</h1>
+              <p className="mt-2 text-slate-600">{motivationalMessage}</p>
+            </div>
+            <div className="flex gap-3">
+              <Button className="rounded-2xl bg-orange-500 text-white hover:bg-orange-600" onClick={() => router.push('/tracker')}>
+                <Camera className="w-4 h-4" />
+                Log a meal
+              </Button>
+              <Button variant="outline" className="rounded-2xl" onClick={() => router.push('/leaderboard')}>
+                <Trophy className="w-4 h-4" />
+                Leaderboard
+              </Button>
+            </div>
           </div>
-          <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-            <Star className="w-8 h-8" />
-          </div>
-        </div>
-        
-        {/* Level Progress */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold">Level {levelInfo.level}</span>
-            <span className="text-sm">{progress.progressXP} / {progress.neededXP} XP</span>
-          </div>
-          <Progress value={progress.progressPercentage} className="h-2 bg-white/20" />
-          <p className="text-xs text-white/80 mt-2">{levelInfo.title}</p>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Today's Calories */}
-          <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-0 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Flame className="w-8 h-8 text-orange-600" />
-                <Badge variant="secondary" className="bg-orange-200 text-orange-800">Today</Badge>
+      <main className="mx-auto max-w-6xl space-y-6 px-4 pt-6 sm:px-6">
+        <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+          <Card className="border-0 bg-white shadow-xl">
+            <CardContent className="space-y-5 p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-orange-600">Today</p>
+                  <h2 className="text-4xl font-bold text-slate-900">{analytics.todayCalories}</h2>
+                  <p className="text-sm text-slate-500">calories logged today</p>
+                </div>
+                <div className="rounded-3xl bg-orange-50 p-4">
+                  <Target className="h-7 w-7 text-orange-500" />
+                </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{todayCalories}</p>
-              <p className="text-sm text-gray-600">Calories</p>
+              <Progress value={calorieProgress} className="h-3 bg-orange-100" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Goal</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{dailyGoal}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Remaining</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{remainingCalories}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Days Logged</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{analytics.daysLogged}/7</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Total XP */}
-          <Card className="bg-gradient-to-br from-purple-100 to-purple-50 border-0 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Zap className="w-8 h-8 text-purple-600" />
-                <Badge variant="secondary" className="bg-purple-200 text-purple-800">Total</Badge>
+          <Card className="border-0 bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-xl">
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-white/80">Level Progress</p>
+                  <h3 className="text-2xl font-bold">{levelInfo.title}</h3>
+                  <p className="text-sm text-white/80">Level {levelInfo.level} • {levelInfo.badge}</p>
+                </div>
+                <Sparkles className="h-7 w-7 text-white/90" />
               </div>
-              <p className="text-3xl font-bold text-gray-900">{(userStats?.totalXP || 0).toLocaleString()}</p>
-              <p className="text-sm text-gray-600">XP Earned</p>
+              <Progress value={levelProgress.progressPercentage} className="h-3 bg-white/20" />
+              <div className="space-y-1 text-sm text-white/90">
+                <p>{(userStats?.totalXP || 0).toLocaleString()} total XP</p>
+                {levelProgress.nextLevel ? <p>{levelProgress.neededXP.toLocaleString()} XP to the next milestone</p> : null}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border-0 bg-white shadow-lg">
+            <CardContent className="p-5">
+              <Flame className="mb-3 h-7 w-7 text-orange-500" />
+              <p className="text-sm text-slate-500">Current streak</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">{analytics.currentStreak}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 bg-white shadow-lg">
+            <CardContent className="p-5">
+              <Zap className="mb-3 h-7 w-7 text-red-500" />
+              <p className="text-sm text-slate-500">Weekly XP</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">{analytics.weeklyXP}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 bg-white shadow-lg">
+            <CardContent className="p-5">
+              <BarChart3 className="mb-3 h-7 w-7 text-amber-500" />
+              <p className="text-sm text-slate-500">Weekly calories</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">{analytics.weeklyCalories}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 bg-white shadow-lg">
+            <CardContent className="p-5">
+              <Trophy className="mb-3 h-7 w-7 text-yellow-500" />
+              <p className="text-sm text-slate-500">Global rank</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">#{userStats?.rank || '--'}</p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <Card className="border-0 bg-white shadow-lg">
+            <CardHeader>
+              <CardTitle>Weekly trend</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-7 gap-3">
+                {analytics.dailyBreakdown.map((day) => {
+                  const height = Math.max(16, Math.round((day.calories / Math.max(dailyGoal, 1)) * 120))
+                  const label = new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })
+
+                  return (
+                    <div key={day.date} className="flex flex-col items-center gap-2">
+                      <div className="flex h-36 w-full items-end justify-center rounded-3xl bg-orange-50 px-2 py-3">
+                        <div
+                          className="w-full rounded-2xl bg-gradient-to-t from-orange-500 to-red-500"
+                          style={{ height: `${Math.min(height, 120)}px` }}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs font-medium text-slate-500">{label}</p>
+                        <p className="text-xs text-slate-400">{day.calories} cal</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Average / day</p>
+                  <p className="mt-2 text-xl font-bold text-slate-900">{analytics.averageDailyCalories}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Top meal type</p>
+                  <p className="mt-2 text-xl font-bold capitalize text-slate-900">{analytics.topMealType}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Entries logged</p>
+                  <p className="mt-2 text-xl font-bold text-slate-900">{userStats?.totalEntries || 0}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Streak */}
-          <Card className="bg-gradient-to-br from-red-100 to-red-50 border-0 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Target className="w-8 h-8 text-red-600" />
-                <Badge variant="secondary" className="bg-red-200 text-red-800">Streak</Badge>
+          <div className="space-y-4">
+            <Card className="border-0 bg-white shadow-lg">
+              <CardHeader>
+                <CardTitle>Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {insightCards.length > 0 ? insightCards.slice(0, 3).map((insight) => (
+                  <div key={insight.title} className="rounded-2xl bg-slate-50 p-4">
+                    <p className="font-semibold text-slate-900">{insight.title}</p>
+                    <p className="mt-1 text-sm text-slate-600">{insight.message}</p>
+                  </div>
+                )) : (
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="font-semibold text-slate-900">Keep logging</p>
+                    <p className="mt-1 text-sm text-slate-600">A few more days of tracking will unlock better insights.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 bg-white shadow-lg">
+              <CardHeader>
+                <CardTitle>Daily tip</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-3xl bg-gradient-to-br from-orange-50 to-red-50 p-5">
+                  <p className="text-2xl">{dailyTip.icon}</p>
+                  <p className="mt-3 font-semibold text-slate-900">{dailyTip.title}</p>
+                  <p className="mt-2 text-sm text-slate-600">{dailyTip.content}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+          <Card className="border-0 bg-white shadow-lg">
+            <CardHeader>
+              <CardTitle>Your standing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Username</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">@{userStats?.username || username}</p>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{userStats?.streak || 1}</p>
-              <p className="text-sm text-gray-600">Days</p>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Total calories tracked</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">{userStats?.totalCalories || 0}</p>
+              </div>
+              <Button className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800" onClick={() => router.push('/tracker')}>
+                Open tracker
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </CardContent>
           </Card>
 
-          {/* Leaderboard Rank */}
-          <Card className="bg-gradient-to-br from-yellow-100 to-yellow-50 border-0 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Trophy className="w-8 h-8 text-yellow-600" />
-                <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">Rank</Badge>
-              </div>
-              <p className="text-3xl font-bold text-gray-900">#{userStats?.rank || '---'}</p>
-              <p className="text-sm text-gray-600">Global</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Weekly Summary */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-orange-600" />
-              Weekly Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Total Calories</span>
-                <span className="font-bold text-lg">{weeklyCalories.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Average/Day</span>
-                <span className="font-bold text-lg">{Math.round(weeklyCalories / 7).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Current Level</span>
-                <Badge className="bg-gradient-to-r from-orange-500 to-red-600">
-                  Lv. {levelInfo.level}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top 3 Users */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="w-5 h-5 text-orange-600" />
-              Top Performers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {leaderboard.slice(0, 3).map((user, index) => (
-                <div key={user.username} className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-600'
+          <Card className="border-0 bg-white shadow-lg">
+            <CardHeader>
+              <CardTitle>Top performers</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {leaderboard.slice(0, 5).map((entry, index) => (
+                <div key={entry.username} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl font-bold ${
+                    index === 0 ? 'bg-yellow-400 text-white' : index === 1 ? 'bg-slate-300 text-slate-900' : 'bg-orange-100 text-orange-700'
                   }`}>
-                    <span className="text-white font-bold">{index + 1}</span>
+                    {index + 1}
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{user.username}</p>
-                    <p className="text-sm text-gray-600">Lv. {user.level} • {user.totalXP.toLocaleString()} XP</p>
+                    <p className="font-semibold text-slate-900">{entry.username}</p>
+                    <p className="text-sm text-slate-500">Level {entry.level} • {entry.totalXP.toLocaleString()} XP</p>
                   </div>
-                  {index === 0 && <Trophy className="w-5 h-5 text-yellow-600" />}
                 </div>
               ))}
-            </div>
-            <Button 
-              variant="outline" 
-              className="w-full mt-4"
-              onClick={() => router.push('/leaderboard')}
-            >
-              View Full Leaderboard
-            </Button>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </section>
+      </main>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            className="h-20 bg-gradient-to-r from-orange-500 to-red-600 text-white"
-            onClick={() => router.push('/tracker')}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <Camera className="w-6 h-6" />
-              <span className="text-sm">Scan Food</span>
-            </div>
-          </Button>
-          <Button 
-            className="h-20 bg-gradient-to-r from-purple-500 to-pink-600 text-white"
-            onClick={() => router.push('/leaderboard')}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <Trophy className="w-6 h-6" />
-              <span className="text-sm">Leaderboard</span>
-            </div>
-          </Button>
-        </div>
-      </div>
-
-      {/* Bottom Navigation */}
       <Navigation />
     </div>
   )

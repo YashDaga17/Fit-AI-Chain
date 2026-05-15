@@ -1,30 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { normalizeUsername } from '@/lib/validation'
-
-interface FoodEntry {
-  id: string
-  image: string
-  food: string
-  calories: number
-  timestamp: number
-  xp: number
-  confidence?: string
-  cuisine?: string
-  portionSize?: string
-  ingredients?: string[]
-  cookingMethod?: string
-  nutrients?: {
-    protein: string
-    carbs: string
-    fat: string
-    fiber: string
-    sugar?: string
-  }
-  healthScore?: string
-  allergens?: string[]
-  alternatives?: string
-}
+import type { FoodEntry } from '@/types/tracker'
 
 interface AnalysisResult {
   success: boolean
@@ -51,6 +28,11 @@ interface AnalysisResult {
   bonusMultiplier: number
 }
 
+type FoodLogPayload = Partial<FoodEntry> & {
+  food: string
+  calories: number
+}
+
 export function useFoodAnalysis() {
   const router = useRouter()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -61,21 +43,65 @@ export function useFoodAnalysis() {
     return data?.error || data?.message || fallback
   }
 
+  const getUsernameFromStorage = () => {
+    const walletAuth = localStorage.getItem('wallet_auth')
+    if (!walletAuth) {
+      return null
+    }
+
+    try {
+      const authData = JSON.parse(walletAuth)
+      return normalizeUsername(authData.username)
+    } catch {
+      return null
+    }
+  }
+
+  const mapLogToFoodEntry = (log: any): FoodEntry => ({
+    id: log.id?.toString() || Date.now().toString(),
+    image: log.imageUrl || '/placeholder-food.jpg',
+    food: log.foodName || log.food,
+    calories: log.calories || 0,
+    timestamp: new Date(log.createdAt || Date.now()).getTime(),
+    xp: log.xpEarned || log.xp || 0,
+    confidence: log.confidence,
+    cuisine: log.cuisine,
+    portionSize: log.portionSize,
+    ingredients: log.ingredients,
+    cookingMethod: log.cookingMethod,
+    nutrients: log.nutrients,
+    healthScore: log.healthScore,
+    allergens: log.allergens,
+    alternatives: log.alternatives,
+    mealType: log.mealType,
+  })
+
+  const saveFoodLog = useCallback(async (username: string, foodLog: FoodLogPayload, method: 'POST' | 'PUT', id?: string) => {
+    const response = await fetch('/api/food-logs', {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...(id ? { id } : {}),
+        username,
+        foodLog,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response, method === 'POST' ? 'Failed to save to database' : 'Failed to update food log'))
+    }
+
+    const data = await response.json().catch(() => null)
+    return data?.log ? mapLogToFoodEntry(data.log) : null
+  }, [])
+
   const analyzeFood = useCallback(async (imageData: string): Promise<FoodEntry | null> => {
     setIsAnalyzing(true)
     setError(null)
 
     try {
       // Get username from auth
-      const walletAuth = localStorage.getItem('wallet_auth')
-      if (!walletAuth) {
-        router.push('/')
-        return null
-      }
-
-      const authData = JSON.parse(walletAuth)
-      const username = normalizeUsername(authData.username)
-
+      const username = getUsernameFromStorage()
       if (!username) {
         router.push('/')
         return null
@@ -118,28 +144,9 @@ export function useFoodAnalysis() {
 
         // Step 2: Save to database (with the full image data)
         try {
-          const dbResponse = await fetch('/api/food-logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username,
-              foodLog: newEntry // Store the complete entry including base64 image
-            })
-          })
-
-          if (!dbResponse.ok) {
-            throw new Error(await getErrorMessage(dbResponse, 'Failed to save to database'))
-          }
-
-          const dbData = await dbResponse.json().catch(() => null)
-          const savedLog = dbData?.log
-          if (savedLog) {
-            return {
-              ...newEntry,
-              id: savedLog.id?.toString() || newEntry.id,
-              image: savedLog.imageUrl || newEntry.image,
-              timestamp: new Date(savedLog.createdAt || Date.now()).getTime(),
-            }
+          const savedEntry = await saveFoodLog(username, newEntry, 'POST')
+          if (savedEntry) {
+            return savedEntry
           }
         } catch (dbError: any) {
           setError('Analysis successful! Food logged locally, but couldn\'t sync to cloud database.')
@@ -173,35 +180,85 @@ export function useFoodAnalysis() {
       const data = await response.json()
       const logs = data.logs || []
       
-      // Convert database entries to FoodEntry format
-      return logs.map((log: any) => ({
-        id: log.id?.toString() || Date.now().toString(),
-        image: log.imageUrl || '/placeholder-food.jpg', // Use stored image URL or placeholder
-        food: log.foodName || log.food,
-        calories: log.calories || 0,
-        timestamp: new Date(log.createdAt || Date.now()).getTime(),
-        xp: log.xpEarned || log.xp || 0,
-        confidence: log.confidence,
-        cuisine: log.cuisine,
-        portionSize: log.portionSize,
-        ingredients: log.ingredients,
-        cookingMethod: log.cookingMethod,
-        nutrients: log.nutrients,
-        healthScore: log.healthScore,
-        allergens: log.allergens,
-        alternatives: log.alternatives
-      }))
+      return logs.map(mapLogToFoodEntry)
     } catch (error: any) {
       setError(error.message || 'Failed to fetch food entries')
       return []
     }
   }, [])
 
+  const createManualEntry = useCallback(async (foodLog: FoodLogPayload): Promise<FoodEntry | null> => {
+    const username = getUsernameFromStorage()
+    if (!username) {
+      router.push('/')
+      return null
+    }
+
+    setError(null)
+
+    try {
+      const savedEntry = await saveFoodLog(username, {
+        image: foodLog.image || '/placeholder-food.jpg',
+        xp: foodLog.xp || Math.max(10, Math.round(foodLog.calories / 4)),
+        ...foodLog,
+      }, 'POST')
+      return savedEntry
+    } catch (error: any) {
+      setError(error.message || 'Failed to save food log')
+      return null
+    }
+  }, [router, saveFoodLog])
+
+  const updateFoodEntry = useCallback(async (id: string, foodLog: FoodLogPayload): Promise<FoodEntry | null> => {
+    const username = getUsernameFromStorage()
+    if (!username) {
+      router.push('/')
+      return null
+    }
+
+    setError(null)
+
+    try {
+      return await saveFoodLog(username, foodLog, 'PUT', id)
+    } catch (error: any) {
+      setError(error.message || 'Failed to update food log')
+      return null
+    }
+  }, [router, saveFoodLog])
+
+  const deleteFoodEntry = useCallback(async (id: string): Promise<boolean> => {
+    const username = getUsernameFromStorage()
+    if (!username) {
+      router.push('/')
+      return false
+    }
+
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/food-logs?id=${encodeURIComponent(id)}&username=${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response, 'Failed to delete food log'))
+      }
+
+      return true
+    } catch (error: any) {
+      setError(error.message || 'Failed to delete food log')
+      return false
+    }
+  }, [router])
+
   return {
     isAnalyzing,
     error,
     analyzeFood,
     getFoodEntries,
+    createManualEntry,
+    updateFoodEntry,
+    deleteFoodEntry,
     clearError: () => setError(null)
   }
 }

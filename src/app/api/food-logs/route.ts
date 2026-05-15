@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { upsertUser, createFoodEntry, getFoodEntriesByUsername } from '@/lib/db-utils'
+import { upsertUser, createFoodEntry, getFoodEntriesByUsername, updateFoodEntryById, deleteFoodEntryById } from '@/lib/db-utils'
 import { normalizeUsername, sanitizeNutrition, sanitizePagination, sanitizeString, sanitizeStringArray, clampInteger } from '@/lib/validation'
 
 type FoodEntryInput = Parameters<typeof createFoodEntry>[0]
@@ -82,5 +82,63 @@ export async function POST(req: NextRequest) {
       success: false, 
       message: "Failed to save food log. Please try again." 
     }, { status: 500 })
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const { id, username, foodLog } = await req.json()
+    const normalizedUsername = normalizeUsername(username)
+    const entryId = clampInteger(id, NaN, 1, Number.MAX_SAFE_INTEGER)
+
+    if (!normalizedUsername || !Number.isFinite(entryId) || !foodLog || typeof foodLog !== 'object') {
+      return NextResponse.json({ success: false, message: 'Missing id, username, or foodLog' }, { status: 400 })
+    }
+
+    const updatedEntry = await updateFoodEntryById(entryId, normalizedUsername, {
+      foodName: sanitizeString(foodLog.food, 200) || 'Unknown Food',
+      calories: clampInteger(foodLog.calories, 0, 0, 10000),
+      xpEarned: clampInteger(foodLog.xp, 0, 0, 100000),
+      imageUrl: sanitizeString(foodLog.image, 1024 * 1024) || '/placeholder-food.jpg',
+      confidence: sanitizeString(foodLog.confidence, 50) ?? undefined,
+      cuisine: sanitizeString(foodLog.cuisine, 100) ?? undefined,
+      portionSize: sanitizeString(foodLog.portionSize, 100) ?? undefined,
+      ingredients: sanitizeStringArray(foodLog.ingredients, 30, 100) ?? undefined,
+      cookingMethod: sanitizeString(foodLog.cookingMethod, 100) ?? undefined,
+      nutrients: sanitizeNutrition(foodLog.nutrients) ?? undefined,
+      healthScore: sanitizeString(foodLog.healthScore, 50) ?? undefined,
+      allergens: sanitizeStringArray(foodLog.allergens, 20, 100) ?? undefined,
+      alternatives: sanitizeString(foodLog.alternatives, 500) ?? undefined,
+      mealType: sanitizeString(foodLog.mealType, 50) ?? undefined,
+    })
+
+    if (!updatedEntry) {
+      return NextResponse.json({ success: false, message: 'Food log not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, log: updatedEntry })
+  } catch (error) {
+    return NextResponse.json({ success: false, message: 'Failed to update food log' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const username = normalizeUsername(searchParams.get('username'))
+    const id = clampInteger(searchParams.get('id'), NaN, 1, Number.MAX_SAFE_INTEGER)
+
+    if (!username || !Number.isFinite(id)) {
+      return NextResponse.json({ success: false, message: 'Missing id or username' }, { status: 400 })
+    }
+
+    const deleted = await deleteFoodEntryById(id, username)
+    if (!deleted) {
+      return NextResponse.json({ success: false, message: 'Food log not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ success: false, message: 'Failed to delete food log' }, { status: 500 })
   }
 }

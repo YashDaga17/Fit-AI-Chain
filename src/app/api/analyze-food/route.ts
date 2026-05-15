@@ -301,7 +301,7 @@ ACCURACY FOCUS:
       ? foodData.calories 
       : 0
 
-    let baseXP = Math.floor(validCalories / 2)
+    const baseXP = Math.floor(validCalories / 2)
     const categoryBonus = getCategoryBonus(foodData.food)
     const finalXP = Math.floor(baseXP * categoryBonus)
 
