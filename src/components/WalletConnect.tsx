@@ -20,7 +20,7 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
   const isMiniKitAvailable = useMemo(() => {
     if (typeof window === "undefined") return false
     try {
-      return MiniKit.isInstalled()
+      return typeof MiniKit !== "undefined" && MiniKit?.isInstalled?.()
     } catch {
       return false
     }
@@ -145,7 +145,13 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
                 <div className="mt-3 p-2 bg-orange-100 rounded text-xs text-orange-800">
                   <strong>Debug Info:</strong> MiniKit installed: {(() => {
                     try {
-                      return MiniKit.isInstalled() ? 'Yes' : 'No'
+                      try {
+  return typeof MiniKit !== "undefined" && MiniKit?.isInstalled?.()
+    ? 'Yes'
+    : 'No'
+} catch {
+  return 'No (Error)'
+}
                     } catch {
                       return 'No (Error)'
                     }
