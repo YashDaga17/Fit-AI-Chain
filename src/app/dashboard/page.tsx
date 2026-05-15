@@ -182,7 +182,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-{/* Weekly Summary */}
+        {/* Weekly Summary */}
 <Card className="border-0 shadow-lg">
   <CardHeader className="pb-3">
     <CardTitle className="text-lg flex items-center gap-2">
@@ -194,45 +194,26 @@ export default function DashboardPage() {
   <CardContent>
     <div className="space-y-4">
 
-      {/* Total Calories */}
       <div className="flex items-center justify-between">
         <span className="text-gray-600">Total Calories</span>
 
-        <div className="text-right">
-          <p className="font-bold text-lg text-gray-900">
-            {weeklyCalories > 0
-              ? weeklyCalories.toLocaleString()
-              : "--"}
-          </p>
-
-          {weeklyCalories === 0 && (
-            <p className="text-xs text-gray-500">
-              No meals tracked yet
-            </p>
-          )}
-        </div>
+        <span className="font-bold text-lg">
+          {weeklyCalories > 0
+            ? weeklyCalories.toLocaleString()
+            : "No data yet"}
+        </span>
       </div>
 
-      {/* Average Per Day */}
       <div className="flex items-center justify-between">
-        <span className="text-gray-600">Average / Day</span>
+        <span className="text-gray-600">Average/Day</span>
 
-        <div className="text-right">
-          <p className="font-bold text-lg text-gray-900">
-            {weeklyCalories > 0
-              ? Math.round(weeklyCalories / 7).toLocaleString()
-              : "--"}
-          </p>
-
-          {weeklyCalories === 0 && (
-            <p className="text-xs text-gray-500">
-              Start tracking meals
-            </p>
-          )}
-        </div>
+        <span className="font-bold text-lg">
+          {weeklyCalories > 0
+            ? Math.round(weeklyCalories / 7).toLocaleString()
+            : "Start tracking"}
+        </span>
       </div>
 
-      {/* Current Level */}
       <div className="flex items-center justify-between">
         <span className="text-gray-600">Current Level</span>
 
@@ -241,24 +222,86 @@ export default function DashboardPage() {
         </Badge>
       </div>
 
-      {/* Empty State Helper */}
-      {weeklyCalories === 0 && (
+      {weeklyCalories === 0 ? (
         <div className="rounded-xl border border-dashed border-orange-300 bg-orange-50 p-3">
           <p className="text-sm font-medium text-orange-700">
-            Your weekly insights will appear once meal tracking begins.
+            Weekly insights will appear once meal tracking begins.
           </p>
 
           <p className="text-xs text-orange-600 mt-1">
             Start by scanning or logging your first meal entry.
           </p>
         </div>
+      ) : (
+        <p className="text-xs text-gray-500">
+          Consistent tracking helps improve progress visibility and level growth.
+        </p>
       )}
-
-      {/* Progress Hint */}
-      <p className="text-xs text-gray-500">
-        Consistent tracking helps improve progress visibility and level growth.
-      </p>
 
     </div>
   </CardContent>
 </Card>
+
+        {/* Top 3 Users */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-orange-600" />
+              Top Performers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {leaderboard.slice(0, 3).map((user, index) => (
+                <div key={user.username} className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                    index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-600'
+                  }`}>
+                    <span className="text-white font-bold">{index + 1}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{user.username}</p>
+                    <p className="text-sm text-gray-600">Lv. {user.level} • {user.totalXP.toLocaleString()} XP</p>
+                  </div>
+                  {index === 0 && <Trophy className="w-5 h-5 text-yellow-600" />}
+                </div>
+              ))}
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full mt-4"
+              onClick={() => router.push('/leaderboard')}
+            >
+              View Full Leaderboard
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          <Button 
+            className="h-20 bg-gradient-to-r from-orange-500 to-red-600 text-white"
+            onClick={() => router.push('/tracker')}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Camera className="w-6 h-6" />
+              <span className="text-sm">Scan Food</span>
+            </div>
+          </Button>
+          <Button 
+            className="h-20 bg-gradient-to-r from-purple-500 to-pink-600 text-white"
+            onClick={() => router.push('/leaderboard')}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Trophy className="w-6 h-6" />
+              <span className="text-sm">Leaderboard</span>
+            </div>
+          </Button>
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <Navigation />
+    </div>
+  )
+}
