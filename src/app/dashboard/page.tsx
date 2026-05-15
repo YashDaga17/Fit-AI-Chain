@@ -194,18 +194,29 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Total Calories</span>
-                <span className="font-bold text-lg">{weeklyCalories.toLocaleString()}</span>
+                <span className="font-bold text-lg">{weeklyCalories > 0 
+  ? weeklyCalories.toLocaleString() 
+  : "No data yet"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Average/Day</span>
-                <span className="font-bold text-lg">{Math.round(weeklyCalories / 7).toLocaleString()}</span>
+                <span className="font-bold text-lg">{weeklyCalories > 0
+  ? Math.round(weeklyCalories / 7).toLocaleString()
+  : "Start tracking"}</span>
+  
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Current Level</span>
                 <Badge className="bg-gradient-to-r from-orange-500 to-red-600">
                   Lv. {levelInfo.level}
                 </Badge>
+                
+                
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+  Track meals consistently to level up faster.
+</p>
+
             </div>
           </CardContent>
         </Card>
