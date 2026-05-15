@@ -277,7 +277,7 @@ export default function Home() {
       <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-b-3xl shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Welcome back! 👋</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome back! 👋</h1>
             <p className="text-white/90">@{userStats?.username || 'User'}</p>
           </div>
           <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
@@ -296,12 +296,12 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-5 space-y-6 max-w-7xl mx-auto">
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Today's Calories */}
           <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-0 shadow-lg">
-            <CardContent className="p-4">
+  <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <Flame className="w-8 h-8 text-orange-600" />
                 <Badge variant="secondary" className="bg-orange-200 text-orange-800">Today</Badge>
@@ -313,7 +313,7 @@ export default function Home() {
 
           {/* Total XP */}
           <Card className="bg-gradient-to-br from-purple-100 to-purple-50 border-0 shadow-lg">
-            <CardContent className="p-4">
+  <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <Zap className="w-8 h-8 text-purple-600" />
                 <Badge variant="secondary" className="bg-purple-200 text-purple-800">Total</Badge>
@@ -350,12 +350,12 @@ export default function Home() {
 
         {/* Weekly Summary */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
+  <CardContent className="p-5"></CardContent>
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="w-5 h-5 text-orange-600" />
               Weekly Summary
             </CardTitle>
-          </CardHeader>
+          
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
