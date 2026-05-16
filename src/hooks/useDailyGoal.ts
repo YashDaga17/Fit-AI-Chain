@@ -23,7 +23,7 @@ export function useDailyGoal(username: string | null | undefined) {
       const stored = localStorage.getItem(getStorageKey(username))
       if (stored) {
         const parsed = Number.parseInt(stored, 10)
-        if (Number.isFinite(parsed) && parsed > 0) {
+        if (Number.isInteger(parsed) && parsed >= 500 && parsed <= 10000) {
           setDailyGoalState(parsed)
           return
         }
