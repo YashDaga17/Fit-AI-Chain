@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const { isAuthenticated, username, isLoading } = useAuth()
   const { userStats, leaderboard, loading } = useUserStats(username)
-  const  dailyGoal = 2000
+  const { dailyGoal } = useDailyGoal(username)
   const { analytics, loading: analyticsLoading } = useWeeklyAnalytics(username)
 
   useEffect(() => {
