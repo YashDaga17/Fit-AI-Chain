@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, BarChart3, Camera, Flame, Sparkles, Target, Trophy, Zap } from 'lucide-react'
 
 import Navigation from '@/components/Navigation'
+import ShareDialog from '@/components/ShareDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -76,6 +77,11 @@ export default function DashboardPage() {
               <p className="mt-2 text-slate-600">{motivationalMessage}</p>
             </div>
             <div className="flex gap-3">
+              <ShareDialog 
+                streak={analytics.currentStreak} 
+                level={levelInfo.level} 
+                calories={analytics.todayCalories} 
+              />
               <Button className="rounded-2xl bg-orange-500 text-white hover:bg-orange-600" onClick={() => router.push('/tracker')}>
                 <Camera className="w-4 h-4" />
                 Log a meal

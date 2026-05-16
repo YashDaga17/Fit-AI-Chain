@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUserStats } from '@/hooks/useUserStats'
 import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
 import Navigation from '@/components/Navigation'
+import ShareDialog from '@/components/ShareDialog'
 import WalletConnect from "@/components/WalletConnect"
 import { MiniKit } from "@worldcoin/minikit-js"
 
@@ -280,8 +281,15 @@ export default function Home() {
             <h1 className="text-3xl font-bold tracking-tight">Welcome back! 👋</h1>
             <p className="text-white/90">@{userStats?.username || 'User'}</p>
           </div>
-          <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-            <Star className="w-8 h-8" />
+          <div className="flex items-center gap-3">
+            <ShareDialog 
+              streak={userStats?.streak || 1} 
+              level={levelInfo.level} 
+              calories={todayCalories} 
+            />
+            <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+              <Star className="w-8 h-8" />
+            </div>
           </div>
         </div>
         
