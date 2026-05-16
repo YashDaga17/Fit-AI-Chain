@@ -112,6 +112,34 @@ export const userPreferences = pgTable('user_preferences', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+// Friendships table
+export const friendships = pgTable('friendships', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  friendId: integer('friend_id').references(() => users.id).notNull(),
+  status: varchar('status', { length: 20 }).default('pending'), // pending, accepted, blocked
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Comments table
+export const comments = pgTable('comments', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  foodEntryId: integer('food_entry_id').references(() => foodEntries.id).notNull(),
+  comment: text('comment').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Activity Feed table
+export const activityFeed = pgTable('activity_feed', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  activityType: varchar('activity_type', { length: 50 }).notNull(), // logged_food, level_up, achievement
+  content: jsonb('content').notNull(),
+  isPublic: boolean('is_public').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // Export types
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -121,3 +149,9 @@ export type LeaderboardEntry = typeof leaderboardCache.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Achievement = typeof achievements.$inferSelect
 export type UserPreference = typeof userPreferences.$inferSelect
+export type Friendship = typeof friendships.$inferSelect
+export type NewFriendship = typeof friendships.$inferInsert
+export type Comment = typeof comments.$inferSelect
+export type NewComment = typeof comments.$inferInsert
+export type ActivityFeedItem = typeof activityFeed.$inferSelect
+export type NewActivityFeedItem = typeof activityFeed.$inferInsert
