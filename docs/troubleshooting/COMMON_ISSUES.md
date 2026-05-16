@@ -14,16 +14,10 @@ Possible causes:
 - Network problems
 - Corrupted package cache
 
-Solutions:
+Solution:
 
 ```bash
 npm install
-```
-
-OR
-
-```bash
-pnpm install
 ```
 
 Verify Node.js version:

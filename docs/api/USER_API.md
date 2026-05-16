@@ -39,6 +39,23 @@ This endpoint:
 - Links authentication sessions
 - Syncs XP information
 
+### Authentication
+
+This endpoint requires an authenticated user session.
+
+Authentication may be handled using:
+
+- Session cookies
+- JWT/session tokens
+- Wallet-based authentication flow
+
+Possible authentication failures:
+
+| Status Code | Description |
+|---|---|
+| 401 | Authentication required |
+| 403 | Invalid or expired session |
+
 ---
 
 # Example Request

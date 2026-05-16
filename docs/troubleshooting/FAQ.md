@@ -123,7 +123,7 @@ The project uses NeonDB PostgreSQL.
 ## How do I push schema changes?
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 ---

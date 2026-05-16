@@ -38,7 +38,7 @@ async function resetDatabase() {
     `)
     console.log('✅ Tables dropped!')
 
-    console.log('🎉 Database reset complete! Now run: pnpm db:push')
+    console.log('🎉 Database reset complete! Now run: npm db:push')
   } catch (error) {
     console.error('❌ Reset failed:', error.message)
     process.exit(1)

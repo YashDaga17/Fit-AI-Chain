@@ -24,12 +24,6 @@ Start the development server:
 npm run dev
 ```
 
-OR
-
-```bash
-pnpm run dev
-```
-
 Visit:
 
 ```text
@@ -78,7 +72,7 @@ Verify:
 Useful command:
 
 ```bash
-pnpm run db:studio
+npm run db:studio
 ```
 
 ---

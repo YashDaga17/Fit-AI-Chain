@@ -112,6 +112,7 @@ Stores uploaded food image metadata.
 ```text
 users
  ├── food_entries
+ │     └── food_images
  ├── sessions
  └── leaderboard_cache
 ```
@@ -133,19 +134,19 @@ users
 ## Push Schema
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 ## Generate Migrations
 
 ```bash
-pnpm run db:generate
+npm run db:generate
 ```
 
 ## Open Drizzle Studio
 
 ```bash
-pnpm run db:studio
+npm run db:studio
 ```
 
 ---

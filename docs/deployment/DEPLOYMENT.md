@@ -42,12 +42,6 @@ Using npm:
 npm run build
 ```
 
-Using pnpm:
-
-```bash
-pnpm build
-```
-
 ---
 
 # Production Environment Variables
@@ -70,7 +64,7 @@ GOOGLE_API_KEY=your_google_api_key
 Push database schema:
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 Verify:

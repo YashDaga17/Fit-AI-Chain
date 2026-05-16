@@ -149,6 +149,7 @@ World ID integration helps provide sybil resistance by limiting fake or duplicat
 |---|---|
 | `/api/nonce` | Generates authentication nonce |
 | `/api/complete-siwe` | Verifies SIWE signature |
+| `/api/verify` | Verifies authentication session |
 | `/api/user/sync` | Synchronizes user data |
 
 ---

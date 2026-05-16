@@ -6,12 +6,6 @@ This document explains common development workflows in Fit AI Chain.
 
 # Install Dependencies
 
-Using pnpm:
-
-```bash
-pnpm install
-```
-
 Using npm:
 
 ```bash
@@ -21,12 +15,6 @@ npm install
 ---
 
 # Start Development Server
-
-```bash
-pnpm run dev
-```
-
-OR
 
 ```bash
 npm run dev
@@ -49,7 +37,7 @@ cp .env.example .env.local
 ## Push Database Schema
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 ---
@@ -59,7 +47,7 @@ Database schema updates should be tested carefully before deployment.
 ## Generate Database Migrations
 
 ```bash
-pnpm run db:generate
+npm run db:generate
 ```
 
 ---
@@ -67,7 +55,7 @@ pnpm run db:generate
 ## Open Drizzle Studio
 
 ```bash
-pnpm run db:studio
+npm run db:studio
 ```
 
 ---

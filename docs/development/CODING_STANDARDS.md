@@ -77,7 +77,7 @@ function UserCard() {
 | Type | Convention |
 |---|---|
 | Components | PascalCase |
-| Utility files | camelCase |
+| Utility files | kebab-case |
 | Markdown docs | UPPERCASE |
 | API routes | kebab-case |
 

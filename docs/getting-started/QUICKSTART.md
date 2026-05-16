@@ -9,7 +9,7 @@ Get Fit AI Chain running locally in under 5 minutes.
 Before starting, make sure you have:
 
 - Node.js 18+
-- pnpm (recommended) or npm
+- npm
 - Git
 - A NeonDB account
 - A World App developer account
@@ -20,7 +20,7 @@ Before starting, make sure you have:
 # 1. Clone the Repository
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/YashDaga17/Fit-AI-Chain.git
 cd Fit-AI-Chain
 ```
 
@@ -32,12 +32,6 @@ Using npm:
 
 ```bash
 npm install
-```
-
-Using pnpm:
-
-```bash
-pnpm install
 ```
 
 ---
@@ -69,31 +63,19 @@ GOOGLE_API_KEY=your_google_gemini_key
 Initialize the database schema:
 
 ```bash
-pnpm run db:push
-```
-
-OR
-
-```bash
 npm run db:push
 ```
 
 Optional migration workflow:
 
 ```bash
-pnpm run db:generate
-pnpm run db:push
+npm run db:generate
+npm run db:push
 ```
 
 ---
 
 # 5. Start the Development Server
-
-```bash
-pnpm run dev
-```
-
-OR
 
 ```bash
 npm run dev

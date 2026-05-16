@@ -134,6 +134,8 @@ Main sections include:
 - Deployment
 - Features
 - Troubleshooting
+- UI
+- Contributing
 
 ---
 

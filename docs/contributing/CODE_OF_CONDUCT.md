@@ -83,7 +83,8 @@ Questions and learning-oriented discussions are welcomed within the community.
 
 If you encounter inappropriate behavior:
 
-- Contact project maintainers
+- Open a GitHub issue or discussion
+- Contact project maintainers through the repository
 - Provide clear information
 - Remain respectful during reporting
 
@@ -91,7 +92,17 @@ If you encounter inappropriate behavior:
 
 # Enforcement
 
-Project maintainers may remove or restrict contributions that violate this code of conduct.
+Project maintainers review reported violations on a case-by-case basis.
+
+Possible actions may include:
+
+- Warning contributors
+- Temporary restriction from discussions or contributions
+- Permanent removal from the community for severe violations
+
+Maintainers aim to handle reports respectfully and fairly while protecting the community environment.
+
+Contributors may contact maintainers through repository discussions if they believe an enforcement action was applied incorrectly.
 
 ---
 

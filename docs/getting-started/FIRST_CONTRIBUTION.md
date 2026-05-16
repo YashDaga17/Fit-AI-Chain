@@ -49,12 +49,6 @@ Use a descriptive branch name related to your task.
 npm install
 ```
 
-OR
-
-```bash
-pnpm install
-```
-
 ---
 
 # 5. Configure Environment Variables
@@ -97,7 +91,7 @@ Examples:
 # 8. Commit Your Changes
 
 ```bash
-git add .
+git add docs/
 git commit -m "docs: improve project documentation"
 ```
 

@@ -62,7 +62,6 @@ Recommended build configuration:
 | Framework | Next.js |
 | Build Command | `npm run build` |
 | Install Command | `npm install` |
-| Output Directory | `.next` |
 
 ---
 
@@ -81,7 +80,7 @@ After configuration:
 Push the production schema:
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 Verify:

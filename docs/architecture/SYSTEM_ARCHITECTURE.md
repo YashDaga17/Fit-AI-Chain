@@ -126,6 +126,7 @@ Primary tables:
 
 - users
 - food_entries
+- food_images
 - sessions
 - leaderboard_cache
 

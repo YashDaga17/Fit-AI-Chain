@@ -146,7 +146,7 @@ Possible bonuses:
 ```json
 {
   "success": false,
-  "error": "GOOGLE_API_KEY missing"
+  "error": "Server configuration error"
 }
 ```
 

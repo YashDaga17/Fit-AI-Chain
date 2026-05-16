@@ -36,10 +36,12 @@ Verify Database Changes
 Generate migration files:
 
 ```bash
-pnpm run db:generate
+npm run db:generate
 ```
 
-This creates migration files based on schema changes.
+This command creates migration files based on schema changes in the Drizzle ORM schema definitions.
+
+Migration files help track database structure updates across environments.
 
 ---
 
@@ -48,8 +50,12 @@ This creates migration files based on schema changes.
 Push changes to the database:
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
+
+This command applies schema changes directly to the connected database.
+
+The database schema is updated to match the latest Drizzle ORM definitions.
 
 ---
 
@@ -58,7 +64,7 @@ pnpm run db:push
 Inspect the database visually:
 
 ```bash
-pnpm run db:studio
+npm run db:studio
 ```
 
 ---
@@ -78,7 +84,7 @@ src/lib/schema.ts
 ## 2. Generate Migration
 
 ```bash
-pnpm run db:generate
+npm run db:generate
 ```
 
 ---
@@ -86,7 +92,7 @@ pnpm run db:generate
 ## 3. Push Migration
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 ---

@@ -69,7 +69,7 @@ Authentication behavior should be verified both inside World App and standard br
 Use Drizzle Studio:
 
 ```bash
-pnpm run db:studio
+npm run db:studio
 ```
 
 Verify:

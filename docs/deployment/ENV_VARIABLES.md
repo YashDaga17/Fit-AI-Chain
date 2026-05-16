@@ -59,7 +59,9 @@ GOOGLE_API_KEY=your_google_api_key
 
 Used for Google Gemini AI food analysis.
 
-The AI configuration is optional but recommended for full application functionality.
+The AI configuration is required for AI-powered food analysis features.
+
+Without `GOOGLE_API_KEY`, food image analysis endpoints may fail or return limited functionality.
 
 ---
 

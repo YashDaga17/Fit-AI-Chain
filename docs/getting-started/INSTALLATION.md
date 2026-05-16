@@ -9,7 +9,7 @@ This guide explains how to fully install and configure Fit AI Chain for local de
 Before installation, ensure the following are installed:
 
 - Node.js 18+
-- npm or pnpm
+- npm
 - Git
 
 You will also need:
@@ -32,18 +32,6 @@ cd Fit-AI-Chain
 # 2. Install Dependencies
 
 Recommended:
-
-```bash
-npm install -g pnpm
-```
-
-Using pnpm:
-
-```bash
-pnpm install
-```
-
-Using npm:
 
 ```bash
 npm install
@@ -81,20 +69,20 @@ Push the schema to the database:
 This creates the required tables in your NeonDB database.
 
 ```bash
-pnpm run db:push
+npm run db:push
 ```
 
 Optional migration workflow:
 
 ```bash
-pnpm run db:generate
-pnpm run db:push
+npm run db:generate
+npm run db:push
 ```
 
 Open Drizzle Studio:
 
 ```bash
-pnpm run db:studio
+npm run db:studio
 ```
 
 Reset database (warning: deletes all data):
@@ -106,12 +94,6 @@ node scripts/reset-database.mjs
 ---
 
 # 5. Start the Development Server
-
-Using pnpm:
-
-```bash
-pnpm run dev
-```
 
 Using npm:
 
