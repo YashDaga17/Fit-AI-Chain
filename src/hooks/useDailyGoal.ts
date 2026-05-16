@@ -37,7 +37,8 @@ export function useDailyGoal(username: string | null | undefined) {
 
   const setDailyGoal = useCallback(
     async (goal: number) => {
-      const safeGoal = Math.max(500, Math.min(10000, goal))
+      const validGoal = Number.isFinite(goal) ? goal : DEFAULT_DAILY_GOAL
+      const safeGoal = Math.max(500, Math.min(10000, validGoal))
       setDailyGoalState(safeGoal)
 
       try {
