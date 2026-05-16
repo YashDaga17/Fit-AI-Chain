@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 pt-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 space-y-6">
         {/* Timeframe Selector */}
         <Card className="bg-white/70 backdrop-blur border-0 shadow-lg rounded-2xl">
           <CardContent className="p-4">
