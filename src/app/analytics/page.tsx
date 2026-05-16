@@ -5,7 +5,8 @@ import {
   Line,
   XAxis,
   YAxis,
-  Tooltip
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
 const data = [
@@ -19,13 +20,16 @@ export default function AnalyticsPage() {
   return (
     <div>
       <h1>Analytics Dashboard 📊</h1>
-
-      <LineChart width={500} height={300} data={data}>
+      <div style={{ width: "600px", margin: "auto" }}>
+      <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data}>
         <XAxis dataKey="date" />
         <YAxis />
         <Tooltip />
         <Line type="monotone" dataKey="weight" stroke="#8884d8" />
       </LineChart>
+      </ResponsiveContainer>
+    </div>
     </div>
   );
 }
