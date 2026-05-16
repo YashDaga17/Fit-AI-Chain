@@ -6323,7 +6323,7 @@ Before we start, make sure you have the following tools installed:
 
 * [Git](https://git-scm.com/) (usually pre-installed on most systems)
 * [Node.js](https://nodejs.org/en/)
-* [npm](https://yarnpkg.com/) 
+* [npm](https://www.npmjs.com/) 
 * [Foundry CLI](https://book.getfoundry.sh/)
 
 ## Clone template
@@ -6497,10 +6497,10 @@ Set up your environment variables in the `.env` file. You will need to set the f
 Back in the root directory of the World ID template app, you can start the local web server:
 
 ```bash
-npm dev
+npm run dev
 ```
 
-The Contract ABI will be automatically re-generated and saved to `src/abi/ContractAbi.json` on each run of `npm dev`.
+The Contract ABI will be automatically re-generated and saved to `src/abi/ContractAbi.json` on each run of `npm run dev`.
 
 ## Iterating
 
