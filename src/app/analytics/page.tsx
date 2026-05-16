@@ -18,7 +18,7 @@ const data = [
 export default function AnalyticsPage() {
   return (
     <div>
-      <h1>Analytics Dashboard</h1>
+      <h1>Analytics Dashboard 📊</h1>
 
       <LineChart width={500} height={300} data={data}>
         <XAxis dataKey="date" />
