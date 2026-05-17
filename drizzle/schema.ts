@@ -129,7 +129,7 @@ export const exerciseLogs = pgTable("exercise_logs", {
 	intensity: varchar({ length: 20 }).default('medium'),
 	category: varchar({ length: 50 }),
 	date: varchar({ length: 10 }).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.userId],
