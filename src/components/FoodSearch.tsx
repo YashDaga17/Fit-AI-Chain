@@ -102,11 +102,18 @@ export default function FoodSearch({
       }
 
       setResults(
-        (data.logs || []).map((log: any) => ({
-          ...log,
-          food: log.food ?? log.foodName ?? 'Unknown Food',
-        }))
-      )
+  (data.logs || []).map((log: any) => ({
+    ...log,
+
+    food: log.food ?? log.foodName ?? 'Unknown Food',
+
+    image: log.image ?? log.imageUrl ?? '/placeholder-food.jpg',
+
+    xp: log.xp ?? log.xpEarned,
+
+    timestamp: log.timestamp ?? log.createdAt,
+  }))
+)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while searching')
       setResults([])
@@ -118,15 +125,19 @@ export default function FoodSearch({
   const [isRelogging, setIsRelogging] = useState(false)
 
   const handleRelogEntry = useCallback(
-    async (entry: FoodEntry) => {
-      if (onRelogEntry && !isRelogging) {
-        setIsRelogging(true)
+  async (entry: FoodEntry) => {
+    if (onRelogEntry && !isRelogging) {
+      setIsRelogging(true)
+
+      try {
         await onRelogEntry(entry)
+      } finally {
         setIsRelogging(false)
       }
-    },
-    [onRelogEntry, isRelogging]
-  )
+    }
+  },
+  [onRelogEntry, isRelogging]
+)
 
   const clearSearch = useCallback(() => {
     setFilters({
@@ -338,15 +349,15 @@ export default function FoodSearch({
 
                     {entry.nutrients && (
                       <div className="flex gap-2 text-xs text-gray-500 mt-1">
-                        {entry.nutrients.protein && (
+                        {entry.nutrients.protein != null && (
                           <span>P: {entry.nutrients.protein}</span>
-                        )}
-                        {entry.nutrients.carbs && (
+                          )}
+                        {entry.nutrients.carbs != null && (
                           <span>C: {entry.nutrients.carbs}</span>
-                        )}
-                        {entry.nutrients.fat && (
+                          )}
+                        {entry.nutrients.fat != null && (
                           <span>F: {entry.nutrients.fat}</span>
-                        )}
+                          )}
                       </div>
                     )}
                   </div>
