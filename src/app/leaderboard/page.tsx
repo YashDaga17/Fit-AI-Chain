@@ -247,7 +247,7 @@ export default function LeaderboardPage() {
                           {isCurrentUser(entry.username) ? '🎯 You' : entry.username}
                         </div>
                         <div className={`text-sm flex items-center space-x-2 ${
-                          isCurrentUser(entry.username) ? 'text-orange-700' : 'text-gray-600'
+                          isCurrentUser(entry.username) ? 'text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-zinc-400'
                         }`}>
                           <span>Level {entry.level || 1}</span>
                           <span>•</span>
