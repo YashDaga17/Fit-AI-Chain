@@ -22,19 +22,13 @@ fi
 
 echo "✅ Node.js $(node --version) detected"
 
-# Check if pnpm is available, otherwise use npm
-if command -v pnpm &> /dev/null; then
-    PKG_MANAGER="pnpm"
-    echo "✅ Using pnpm package manager"
-else
-    PKG_MANAGER="npm"
-    echo "✅ Using npm package manager"
-    echo "💡 Consider installing pnpm for better performance: npm install -g pnpm"
-fi
+# Use npm package manager
+PKG_MANAGER="npm"
+echo "✅ Using npm package manager"
 
 echo ""
 echo "📦 Installing dependencies..."
-$PKG_MANAGER install
+npm install
 
 echo ""
 echo "📋 Setting up environment file..."

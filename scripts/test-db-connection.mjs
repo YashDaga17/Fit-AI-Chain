@@ -66,7 +66,7 @@ async function testConnection() {
     
     if (tables.length === 0) {
       console.log('⚠️  No application tables found');
-      console.log('   Run: pnpm run db:push');
+      console.log('   Run: npm run db:push');
     } else {
       console.log('✅ Found tables:', tables.map(t => t.table_name).join(', '));
       
