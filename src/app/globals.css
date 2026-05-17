@@ -263,7 +263,7 @@
 
   /* Focus Ring */
   .focus-ring:focus {
-    outline: 2px solid #f97316;
+    outline: 2px solid var(--ring, #f97316);
     outline-offset: 2px;
   }
 

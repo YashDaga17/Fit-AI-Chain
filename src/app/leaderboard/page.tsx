@@ -52,16 +52,16 @@ export default function LeaderboardPage() {
     if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />
     if (rank === 2) return <Medal className="h-6 w-6 text-gray-400" />
     if (rank === 3) return <Award className="h-6 w-6 text-amber-600" />
-    return <div className="w-6 h-6 flex items-center justify-center font-bold text-gray-600">#{rank}</div>
+    return <div className="w-6 h-6 flex items-center justify-center font-bold text-gray-600 dark:text-zinc-400">#{rank}</div>
   }
 
   const getRankStyle = (username: string, rank: number) => {
     const isUser = isCurrentUser(username)
-    if (isUser) return 'bg-orange-100 border-orange-300 shadow-lg ring-2 ring-orange-400'
-    if (rank === 1) return 'bg-yellow-50 border-yellow-300'
-    if (rank === 2) return 'bg-gray-50 border-gray-300'
-    if (rank === 3) return 'bg-amber-50 border-amber-300'
-    return 'bg-white border-gray-200'
+    if (isUser) return 'bg-orange-100 border-orange-300 shadow-lg ring-2 ring-orange-400 dark:bg-orange-500/15 dark:border-orange-500/40 dark:ring-orange-500/50'
+    if (rank === 1) return 'bg-yellow-50 border-yellow-300 dark:bg-yellow-500/12 dark:border-yellow-500/35'
+    if (rank === 2) return 'bg-gray-50 border-gray-300 dark:bg-zinc-800/80 dark:border-zinc-600/60'
+    if (rank === 3) return 'bg-amber-50 border-amber-300 dark:bg-amber-500/12 dark:border-amber-500/35'
+    return 'bg-white border-gray-200 dark:bg-[#161b22]/80 dark:border-white/10'
   }
 
   const isCurrentUser = (entryUsername: string) => {
