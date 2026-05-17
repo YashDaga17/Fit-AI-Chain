@@ -304,13 +304,17 @@ export async function searchFoodEntries(
       )
     }
 
+    const MAX_LIMIT = 100
+    const clampedLimit = Math.min(Math.max(1, Math.trunc(Number(filters.limit ?? 50)) || 50), MAX_LIMIT)
+    const clampedOffset = Math.max(0, Math.trunc(Number(filters.offset ?? 0)) || 0)
+
     return await db
       .select()
       .from(foodEntries)
       .where(and(...conditions))
       .orderBy(desc(foodEntries.createdAt))
-      .limit(filters.limit ?? 50)
-      .offset(filters.offset ?? 0)
+      .limit(clampedLimit)
+      .offset(clampedOffset)
 
   } catch (error) {
     throw error
