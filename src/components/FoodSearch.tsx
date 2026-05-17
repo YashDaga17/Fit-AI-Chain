@@ -115,13 +115,17 @@ export default function FoodSearch({
     }
   }, [filters, username])
 
+  const [isRelogging, setIsRelogging] = useState(false)
+
   const handleRelogEntry = useCallback(
     async (entry: FoodEntry) => {
-      if (onRelogEntry) {
-        onRelogEntry(entry)
+      if (onRelogEntry && !isRelogging) {
+        setIsRelogging(true)
+        await onRelogEntry(entry)
+        setIsRelogging(false)
       }
     },
-    [onRelogEntry]
+    [onRelogEntry, isRelogging]
   )
 
   const clearSearch = useCallback(() => {

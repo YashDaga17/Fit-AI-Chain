@@ -288,17 +288,12 @@ export async function searchFoodEntries(
     // Date range filters
     if (filters.startDate) {
       conditions.push(
-        gte(
-          foodEntries.createdAt,
-          new Date(filters.startDate)
-        )
+        gte(foodEntries.createdAt, new Date(`${filters.startDate}T00:00:00`))
       )
     }
 
     if (filters.endDate) {
-      const end = new Date(filters.endDate)
-      end.setHours(23, 59, 59, 999)
-
+      const end = new Date(`${filters.endDate}T23:59:59.999`)
       conditions.push(
         lte(foodEntries.createdAt, end)
       )
