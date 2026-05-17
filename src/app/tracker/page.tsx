@@ -1,5 +1,6 @@
 'use client'
 
+import FoodSearch from '@/components/FoodSearch'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, Flame, Loader2, Pencil, Plus, Search, Target, Trash2, UtensilsCrossed, X, Zap } from 'lucide-react'
@@ -426,6 +427,26 @@ export default function TrackerPage() {
             </CardContent>
           </Card>
         </section>
+
+        {username && (
+          <FoodSearch
+            username={username}
+            onRelogEntry={async (entry) => {
+              await createManualEntry({
+                food: entry.food || (entry as any).foodName || 'Unknown Food',
+                calories: entry.calories,
+                mealType: entry.mealType || 'meal',
+                portionSize: entry.portionSize,
+                cuisine: entry.cuisine,
+                nutrients: entry.nutrients,
+                xp: entry.xp || Math.max(10, Math.round(entry.calories / 4)),
+                image: entry.image || '/placeholder-food.jpg',
+                confidence: 'manual',
+              })
+              await refreshTrackerData()
+            }}
+          />
+        )}
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
