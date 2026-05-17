@@ -123,9 +123,9 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Welcome to Fit AI Chain! 🎯</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome to Fit AI Chain! 🎯</h2>
           <p className="mt-1.5 text-sm text-gray-600">Connect your wallet to start tracking your fitness journey</p>
-          <p className="mt-1 text-sm text-gray-500">🔒 Secure authentication required for each session</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">🔒 Secure authentication required for each session</p>
         </div>
 
         {!isMiniKitAvailable ? (

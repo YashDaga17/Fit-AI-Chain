@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
   // Show loading while authentication is being checked
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] flex items-center justify-center text-black dark:text-white transition-colors duration-300">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-orange-600 mx-auto mb-4" />
           <p className="text-orange-600">Checking authentication...</p>
@@ -69,9 +69,9 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+    <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] text-black dark:text-white transition-colors duration-300">
       {/* Modern Header */}
-      <div className="bg-white/80 backdrop-blur-xl border-b border-white/20 sticky top-0 z-30 shadow-sm">
+      <div className="bg-white/70 dark:bg-[#111827]/90 backdrop-blur-xl border-b border-black/5 dark:border-white/10 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -81,11 +81,11 @@ export default function LeaderboardPage() {
                 onClick={() => router.back()}
                 className="hover:bg-orange-50 rounded-2xl p-2"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
+                <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-zinc-400" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Leaderboard</h1>
-                <p className="text-sm text-gray-600">See how you rank globally</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Leaderboard</h1>
+                <p className="text-sm text-gray-600 dark:text-zinc-400">See how you rank globally</p>
               </div>
             </div>
             {username && (
@@ -99,16 +99,16 @@ export default function LeaderboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 space-y-6">
         {/* Timeframe Selector */}
-        <Card className="bg-white/70 backdrop-blur border-0 shadow-lg rounded-2xl">
+        <Card className="bg-white/70 dark:bg-[#111827]/90 backdrop-blur border-0 shadow-lg rounded-2xl">
           <CardContent className="p-4">
             <div className="flex justify-center">
-              <div className="flex bg-gray-100 rounded-2xl p-1">
+              <div className="flex bg-gray-100 dark:bg-[#1c2128] rounded-2xl p-1">
                 <button
                   onClick={() => setTimeframe('daily')}
                   className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                     timeframe === 'daily'
-                      ? 'bg-white shadow-sm text-orange-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white dark:bg-[#161b22] shadow-sm text-orange-600 dark:text-orange-400'
+                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   Daily
@@ -117,8 +117,8 @@ export default function LeaderboardPage() {
                   onClick={() => setTimeframe('weekly')}
                   className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                     timeframe === 'weekly'
-                      ? 'bg-white shadow-sm text-orange-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white dark:bg-[#161b22] shadow-sm text-orange-600 dark:text-orange-400'
+                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   Weekly
@@ -127,8 +127,8 @@ export default function LeaderboardPage() {
                   onClick={() => setTimeframe('alltime')}
                   className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                     timeframe === 'alltime'
-                      ? 'bg-white shadow-sm text-orange-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white dark:bg-[#161b22] shadow-sm text-orange-600 dark:text-orange-400'
+                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   All Time
@@ -182,7 +182,7 @@ export default function LeaderboardPage() {
 
         {/* Leaderboard List */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900 px-1">All Rankings</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white px-1">All Rankings</h3>
           {loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -204,8 +204,8 @@ export default function LeaderboardPage() {
             <Card className="bg-gray-50 border-gray-200">
               <CardContent className="p-8 text-center">
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No leaderboard data available yet.</p>
-                <p className="text-sm text-gray-500 mt-2">Start tracking food to see rankings!</p>
+                <p className="text-gray-600 dark:text-zinc-400">No leaderboard data available yet.</p>
+                <p className="text-sm text-gray-500 dark:text-zinc-500 mt-2">Start tracking food to see rankings!</p>
               </CardContent>
             </Card>
           ) : (
@@ -224,7 +224,7 @@ export default function LeaderboardPage() {
                         ? 'bg-orange-200 text-orange-900' 
                         : entry.rank <= 3
                         ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-gray-100 dark:bg-[#111827]/50 text-gray-600 dark:text-zinc-400'
                     }`}>
                       {entry.rank <= 3 ? (
                         getRankIcon(entry.rank)
@@ -242,7 +242,7 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className={`font-semibold truncate ${
-                          isCurrentUser(entry.username) ? 'text-orange-900' : 'text-gray-900'
+                          isCurrentUser(entry.username) ? 'text-orange-900 dark:text-orange-400' : 'text-gray-900 dark:text-white'
                         }`}>
                           {isCurrentUser(entry.username) ? '🎯 You' : entry.username}
                         </div>
@@ -261,11 +261,11 @@ export default function LeaderboardPage() {
 
                     {/* Stats */}
                     <div className="text-right">
-                      <div className={`font-bold ${isCurrentUser(entry.username) ? 'text-orange-900' : 'text-gray-900'}`}>
+                      <div className={`font-bold ${isCurrentUser(entry.username) ? 'text-orange-900 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
                         {(entry.totalXP || 0).toLocaleString()}
                       </div>
                       <div className={`text-xs tracking-wide ${
-                        isCurrentUser(entry.username) ? 'text-orange-600' : 'text-gray-500'
+                        isCurrentUser(entry.username) ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-zinc-500'
                       }`}>
                         XP Points
                       </div>
