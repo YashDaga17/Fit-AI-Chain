@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, boolean, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, integer, timestamp, jsonb, boolean, varchar, date } from 'drizzle-orm/pg-core'
 
 // Users table - stores World App authenticated users (username only)
 export const users = pgTable('users', {
@@ -122,7 +122,7 @@ export const exerciseLogs = pgTable('exercise_logs', {
   caloriesBurned: integer('calories_burned').notNull(),
   intensity: varchar('intensity', { length: 20 }).default('medium'), // low, medium, high
   category: varchar('category', { length: 50 }), // cardio, strength, flexibility, sports
-  date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD
+  date: date('date').notNull(), // YYYY-MM-DD
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
