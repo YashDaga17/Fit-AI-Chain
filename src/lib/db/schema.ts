@@ -118,14 +118,14 @@ export const recipes = pgTable('recipes', {
   userId: integer('user_id').references(() => users.id).notNull(),
   name: varchar('name', { length: 200 }).notNull(),
   description: text('description'),
-  servings: integer('servings').default(1),
+  servings: integer('servings').default(1).notNull(),
   ingredients: jsonb('ingredients').notNull(),
   totalCalories: integer('total_calories').notNull(),
   totalProtein: integer('total_protein'),
   totalCarbs: integer('total_carbs'),
   totalFat: integer('total_fat'),
   imageUrl: text('image_url'),
-  isPublic: boolean('is_public').default(false),
+  isPublic: boolean('is_public').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
