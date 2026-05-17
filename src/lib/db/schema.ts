@@ -112,6 +112,23 @@ export const userPreferences = pgTable('user_preferences', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+// Recipes table
+export const recipes = pgTable('recipes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  servings: integer('servings').default(1),
+  ingredients: jsonb('ingredients').notNull(),
+  totalCalories: integer('total_calories').notNull(),
+  totalProtein: integer('total_protein'),
+  totalCarbs: integer('total_carbs'),
+  totalFat: integer('total_fat'),
+  imageUrl: text('image_url'),
+  isPublic: boolean('is_public').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // Export types
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -121,3 +138,5 @@ export type LeaderboardEntry = typeof leaderboardCache.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Achievement = typeof achievements.$inferSelect
 export type UserPreference = typeof userPreferences.$inferSelect
+export type Recipe = typeof recipes.$inferSelect
+export type NewRecipe = typeof recipes.$inferInsert
