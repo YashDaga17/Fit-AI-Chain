@@ -690,7 +690,12 @@ export async function createExerciseLog(entry: {
   }
 
   try {
-    const [newEntry] = await db.insert(exerciseLogs).values(entry).returning()
+    const dbEntry = {
+      ...entry,
+      intensity: entry.intensity || 'medium',
+      category: entry.category === undefined ? null : entry.category,
+    }
+    const [newEntry] = await db.insert(exerciseLogs).values(dbEntry).returning()
     return newEntry
   } catch (error) {
     throw error
