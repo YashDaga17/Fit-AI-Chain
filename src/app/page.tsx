@@ -55,25 +55,30 @@ export default function Home() {
         return
       }
       
-      // Install MiniKit synchronously with error handling
-      let miniKitInstalled = false
-      try {
-          if (typeof window !== "undefined") {
-            MiniKit.install(appId)
-            miniKitInstalled = MiniKit.isInstalled()
-          }
-        } catch (error) {
-        miniKitInstalled = false
-      }
-      
-      // Enhanced World App detection
+      // Enhanced World App detection to run BEFORE trying to install MiniKit
+      // This prevents the console errors in local development browsers
       const userAgent = navigator.userAgent.toLowerCase()
       const isWorldAppUA = userAgent.includes('worldapp') || userAgent.includes('minikit')
       const hasWorldBridge = typeof (window as any).WorldApp !== 'undefined'
       const hasWebViewBridge = typeof (window as any).webkit?.messageHandlers?.minikit !== 'undefined'
       
+      const seemsLikeWorldApp = isWorldAppUA || hasWorldBridge || hasWebViewBridge
+
+      let miniKitInstalled = false
       
-      const isInWorldApp = miniKitInstalled || isWorldAppUA || hasWorldBridge || hasWebViewBridge
+      // Only install MiniKit if we think we're in the app, preventing the "MiniKit is not installed" console error
+      if (seemsLikeWorldApp) {
+        try {
+          if (typeof window !== "undefined") {
+            MiniKit.install(appId)
+            miniKitInstalled = MiniKit.isInstalled()
+          }
+        } catch (error) {
+          miniKitInstalled = false
+        }
+      }
+      
+      const isInWorldApp = miniKitInstalled || seemsLikeWorldApp
       setIsWorldApp(isInWorldApp)
       setIsInitialized(true)
       
@@ -91,39 +96,9 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated && username) {
-      loadCalorieData()
+      router.push('/dashboard')
     }
-  }, [isAuthenticated, username])
-
-  const loadCalorieData = async () => {
-    if (!username) return
-
-    try {
-      const entries = await getFoodEntries(username)
-      
-      const now = new Date()
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).getTime()
-      
-      let todayCals = 0
-      let weeklyCals = 0
-      
-      entries.forEach((entry: any) => {
-        const logTime = new Date(entry.timestamp).getTime()
-        if (logTime >= todayStart) {
-          todayCals += entry.calories || 0
-        }
-        if (logTime >= weekStart) {
-          weeklyCals += entry.calories || 0
-        }
-      })
-      
-      setTodayCalories(todayCals)
-      setWeeklyCalories(weeklyCals)
-    } catch (error) {
-      // Handle error silently
-    }
-  }
+  }, [isAuthenticated, username, router])
 
   const handleConnect = async (address: string, username?: string) => {
     console.log('🔄 handleConnect started with:', { address, username })
@@ -257,193 +232,13 @@ export default function Home() {
     )
   }
 
-  // Dashboard content for authenticated users
-  const levelInfo = userStats ? getUserLevel(userStats.totalXP) : { level: 1, title: 'Beginner', badge: '🥉' }
-  const progress = userStats ? getXPProgress(userStats.totalXP) : { progressXP: 0, neededXP: 500, progressPercentage: 0 }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
+  // If authenticated but hasn't redirected yet, show loading
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-b-3xl shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back! 👋</h1>
-            <p className="text-white/90">@{userStats?.username || 'User'}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <ShareDialog 
-              streak={userStats?.streak || 1} 
-              level={levelInfo.level} 
-              calories={todayCalories} 
-            />
-            <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-              <Star className="w-8 h-8" />
-            </div>
-          </div>
-        </div>
-        
-        {/* Level Progress */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold">Level {levelInfo.level}</span>
-            <span className="text-sm">{progress.progressXP} / {progress.neededXP} XP</span>
-          </div>
-          <Progress value={progress.progressPercentage} className="h-2 bg-white/20" />
-          <p className="text-xs text-white/80 mt-2">{levelInfo.title}</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirecting to dashboard...</p>
       </div>
-
-      <div className="p-5 space-y-6 max-w-7xl mx-auto">
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Today's Calories */}
-          <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-0 shadow-lg">
-  <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <Flame className="w-8 h-8 text-orange-600" />
-                <Badge variant="secondary" className="bg-orange-200 text-orange-800">Today</Badge>
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{todayCalories}</p>
-              <p className="text-sm text-gray-600">Calories</p>
-            </CardContent>
-          </Card>
-
-          {/* Total XP */}
-          <Card className="bg-gradient-to-br from-purple-100 to-purple-50 border-0 shadow-lg">
-  <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <Zap className="w-8 h-8 text-purple-600" />
-                <Badge variant="secondary" className="bg-purple-200 text-purple-800">Total</Badge>
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{(userStats?.totalXP || 0).toLocaleString()}</p>
-              <p className="text-sm text-gray-600">XP Earned</p>
-            </CardContent>
-          </Card>
-
-          {/* Streak */}
-          <Card className="bg-gradient-to-br from-red-100 to-red-50 border-0 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Target className="w-8 h-8 text-red-600" />
-                <Badge variant="secondary" className="bg-red-200 text-red-800">Streak</Badge>
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{userStats?.streak || 1}</p>
-              <p className="text-sm text-gray-600">Days</p>
-            </CardContent>
-          </Card>
-
-          {/* Leaderboard Rank */}
-          <Card className="bg-gradient-to-br from-yellow-100 to-yellow-50 border-0 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Trophy className="w-8 h-8 text-yellow-600" />
-                <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">Rank</Badge>
-              </div>
-              <p className="text-3xl font-bold text-gray-900">#{userStats?.rank || '---'}</p>
-              <p className="text-sm text-gray-600">Global</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Weekly Summary */}
-        <Card className="border-0 shadow-lg">
-  <CardContent className="p-5"></CardContent>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-orange-600" />
-              Weekly Summary
-            </CardTitle>
-          
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Total Calories</span>
-                <span className="font-bold text-lg">{weeklyCalories.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Average/Day</span>
-                <span className="font-bold text-lg">{Math.round(weeklyCalories / 7).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Current Level</span>
-                <Badge className="bg-gradient-to-r from-orange-500 to-red-600">
-                  Lv. {levelInfo.level}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top 3 Users */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="w-5 h-5 text-orange-600" />
-              Top Performers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {leaderboard.slice(0, 3).map((user, index) => (
-                <div key={user.username} className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-600'
-                  }`}>
-                    <span className="text-white font-bold">{index + 1}</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{user.username}</p>
-                    <p className="text-sm text-gray-600">Lv. {user.level} • {user.totalXP.toLocaleString()} XP</p>
-                  </div>
-                  {index === 0 && <Trophy className="w-5 h-5 text-yellow-600" />}
-                </div>
-              ))}
-            </div>
-            <Button 
-              variant="outline" 
-              className="w-full mt-4"
-              onClick={() => router.push('/leaderboard')}
-            >
-              View Full Leaderboard
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            className="h-20 bg-gradient-to-r from-orange-500 to-red-600 text-white"
-            onClick={() => router.push('/tracker')}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <Camera className="w-6 h-6" />
-              <span className="text-sm">Scan Food</span>
-            </div>
-          </Button>
-          <Button 
-            className="h-20 bg-gradient-to-r from-purple-500 to-pink-600 text-white"
-            onClick={() => router.push('/leaderboard')}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <Trophy className="w-6 h-6" />
-              <span className="text-sm">Leaderboard</span>
-            </div>
-          </Button>
-        </div>
-      </div>
-
-      {/* Bottom Navigation */}
-      <Navigation />
     </div>
   )
 }

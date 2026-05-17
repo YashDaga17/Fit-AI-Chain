@@ -295,7 +295,7 @@ export default function TrackerPage() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 pb-32 pt-6 sm:px-6">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 sm:px-6">
         {analysisError && (
           <Card className="border-red-200 bg-red-50 shadow-sm">
             <CardContent className="flex items-center justify-between gap-3 p-4">

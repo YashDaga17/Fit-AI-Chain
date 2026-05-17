@@ -1,25 +1,54 @@
-import { useState, useEffect } from 'react'
+'use client'
 
-export function useDailyGoal(username: string | null) {
-  const [dailyGoal, setDailyGoal] = useState<number>(2000) // Default 2000 calories
+import { useState, useEffect, useCallback } from 'react'
 
+const DEFAULT_DAILY_GOAL = 2000
+
+function getStorageKey(username: string | null | undefined): string {
+  return `daily_goal_${username || 'anonymous'}`
+}
+
+/**
+ * Hook to manage a user's daily calorie goal.
+ * Persists the value in localStorage per-username.
+ */
+export function useDailyGoal(username: string | null | undefined) {
+  const [dailyGoal, setDailyGoalState] = useState(DEFAULT_DAILY_GOAL)
+
+  // Load saved goal on mount / username change
   useEffect(() => {
-    if (!username) return
+    if (typeof window === 'undefined') return
 
-    const key = `dailyGoal_${username}`
-    const storedGoal = localStorage.getItem(key)
-    if (storedGoal) {
-      setDailyGoal(parseInt(storedGoal, 10))
+    try {
+      const stored = localStorage.getItem(getStorageKey(username))
+      if (stored) {
+        const parsed = Number.parseInt(stored, 10)
+        if (Number.isInteger(parsed) && parsed >= 500 && parsed <= 10000) {
+          setDailyGoalState(parsed)
+          return
+        }
+      }
+    } catch {
+      // localStorage may be unavailable
     }
+
+    setDailyGoalState(DEFAULT_DAILY_GOAL)
   }, [username])
 
-  const updateDailyGoal = (newGoal: number) => {
-    setDailyGoal(newGoal)
-    if (username) {
-      const key = `dailyGoal_${username}`
-      localStorage.setItem(key, newGoal.toString())
-    }
-  }
+  const setDailyGoal = useCallback(
+    async (goal: number) => {
+      const validGoal = Number.isFinite(goal) ? goal : DEFAULT_DAILY_GOAL
+      const safeGoal = Math.max(500, Math.min(10000, validGoal))
+      setDailyGoalState(safeGoal)
 
-  return { dailyGoal, setDailyGoal: updateDailyGoal }
+      try {
+        localStorage.setItem(getStorageKey(username), String(safeGoal))
+      } catch {
+        // fail silently
+      }
+    },
+    [username],
+  )
+
+  return { dailyGoal, setDailyGoal }
 }
