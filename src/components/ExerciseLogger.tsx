@@ -118,7 +118,7 @@ export default function ExerciseLogger({ username, onLogSaved }: ExerciseLoggerP
         {error && (
           <div className="flex items-center justify-between rounded-2xl bg-red-50 p-3 text-sm text-red-700">
             <span>{error}</span>
-            <button type="button" onClick={() => setError(null)}>
+            <button type="button" onClick={() => setError(null)} aria-label="Close error">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -126,10 +126,11 @@ export default function ExerciseLogger({ username, onLogSaved }: ExerciseLoggerP
 
         {/* Exercise search / selection */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Exercise</label>
+          <label htmlFor="search-exercise" className="text-sm font-medium text-slate-700">Exercise</label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
+              id="search-exercise"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
@@ -147,6 +148,7 @@ export default function ExerciseLogger({ username, onLogSaved }: ExerciseLoggerP
                 type="button"
                 onClick={handleClearSelection}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -188,10 +190,11 @@ export default function ExerciseLogger({ username, onLogSaved }: ExerciseLoggerP
 
         {/* Duration */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Duration (minutes)</label>
+          <label htmlFor="exercise-duration" className="text-sm font-medium text-slate-700">Duration (minutes)</label>
           <div className="relative">
             <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
+              id="exercise-duration"
               type="number"
               min="1"
               max="600"
