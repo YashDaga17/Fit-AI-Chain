@@ -67,7 +67,7 @@ export default function ExerciseLogger({ username, onLogSaved }: ExerciseLoggerP
     setError(null)
 
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = new Date().toLocaleDateString('en-CA')
 
       const response = await fetch('/api/exercise', {
         method: 'POST',

@@ -738,7 +738,7 @@ export async function getExerciseLogsByUsername(
  * Get today's exercise logs for a user
  */
 export async function getTodayExerciseLogs(username: string) {
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
   return getExerciseLogsByUsername(username, today)
 }
 

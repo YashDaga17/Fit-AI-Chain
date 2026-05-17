@@ -125,7 +125,7 @@ export default function Home() {
 
       // Fetch today's exercise data
       try {
-        const today = new Date().toISOString().slice(0, 10)
+        const today = new Date().toLocaleDateString('en-CA')
         const exerciseRes = await fetch(`/api/exercise?username=${encodeURIComponent(username)}&date=${today}`)
         if (exerciseRes.ok) {
           const exerciseData = await exerciseRes.json()

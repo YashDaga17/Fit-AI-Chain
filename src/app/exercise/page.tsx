@@ -73,7 +73,7 @@ export default function ExercisePage() {
     try {
       let url = `/api/exercise?username=${encodeURIComponent(username)}`
       if (dateFilter === 'today') {
-        url += `&date=${new Date().toISOString().slice(0, 10)}`
+        url += `&date=${new Date().toLocaleDateString('en-CA')}`
       } else if (dateFilter === 'week') {
         const weekAgo = new Date()
         weekAgo.setDate(weekAgo.getDate() - 7)
@@ -88,7 +88,7 @@ export default function ExercisePage() {
         if (dateFilter === 'week') {
           const weekAgo = new Date()
           weekAgo.setDate(weekAgo.getDate() - 7)
-          const weekAgoStr = weekAgo.toISOString().slice(0, 10)
+          const weekAgoStr = weekAgo.toLocaleDateString('en-CA')
           entries = entries.filter((log: ExerciseLogEntry) => log.date >= weekAgoStr)
         }
 
@@ -111,7 +111,7 @@ export default function ExercisePage() {
   }, [isAuthenticated, isLoading, loadLogs, router, username])
 
   const todaysLogs = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = new Date().toLocaleDateString('en-CA')
     return logs.filter((log) => log.date === today)
   }, [logs])
 
