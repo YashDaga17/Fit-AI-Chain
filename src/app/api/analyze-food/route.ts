@@ -39,9 +39,14 @@ function validateImageInput(image: string): boolean {
 // Confidence validation based on AI response quality
 function validateConfidence(foodData: any, calories: number): string {
   // If calories are exactly round numbers (200, 250, etc), likely a guess
-  if (calories > 0 && calories % 50 === 0 && calories < 1000) {
-    return 'low'
-  }
+  if (
+  calories > 0 &&
+  calories % 50 === 0 &&
+  calories < 1000 &&
+  foodData.confidence !== 'high'
+) {
+  return 'low'
+}
   
   // If food name is generic or unknown, low confidence
   const genericNames = ['unknown', 'food item', 'meal', 'dish', 'snack']
@@ -51,19 +56,33 @@ function validateConfidence(foodData: any, calories: number): string {
   }
 
    // If ingredients are unknown or empty, low confidence
-  if (!foodData.ingredients || foodData.ingredients.length === 0 || 
-      foodData.ingredients.includes('unknown')) {
-    return 'low'
-  }
+  if (
+  !foodData.ingredients ||
+  foodData.ingredients.length === 0 ||
+  foodData.ingredients.some(
+    (ingredient: string) =>
+      ingredient.toLowerCase().includes('unknown')
+  )
+) {
+  return 'low'
+}
   
   // Trust the AI's confidence if it passed all checks
   const aiConfidence = foodData.confidence || 'medium'
   
   // Downgrade "high" to "medium" if portion size is vague
-  if (aiConfidence === 'high' && 
-      (!foodData.portionSize || foodData.portionSize.includes('estimated'))) {
-    return 'medium'
-  }
+  if (
+  aiConfidence === 'high' &&
+  (
+    !foodData.portionSize ||
+    (
+      typeof foodData.portionSize === 'string' &&
+      foodData.portionSize.includes('estimated')
+    )
+  )
+) {
+  return 'medium'
+}
   
   return aiConfidence
 }
