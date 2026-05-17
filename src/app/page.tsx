@@ -125,15 +125,18 @@ export default function Home() {
 
       // Fetch today's exercise data
       try {
-        const today = new Date().toLocaleDateString('en-CA')
+        const d = new Date()
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         const exerciseRes = await fetch(`/api/exercise?username=${encodeURIComponent(username)}&date=${today}`)
         if (exerciseRes.ok) {
           const exerciseData = await exerciseRes.json()
           const burned = (exerciseData.logs || []).reduce((sum: number, log: any) => sum + (log.caloriesBurned || 0), 0)
           setTodayBurned(burned)
+        } else {
+          setTodayBurned(0)
         }
       } catch {
-        // Exercise data fetch failed silently
+        setTodayBurned(0)
       }
     } catch (error) {
       // Handle error silently
