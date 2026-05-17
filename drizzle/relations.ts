@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { users, foodEntries, achievements, sessions, leaderboardCache, userPreferences } from "./schema";
+import { users, foodEntries, achievements, sessions, leaderboardCache, userPreferences, exerciseLogs } from "./schema";
 
 export const foodEntriesRelations = relations(foodEntries, ({one}) => ({
 	user: one(users, {
@@ -14,6 +14,7 @@ export const usersRelations = relations(users, ({many}) => ({
 	sessions: many(sessions),
 	leaderboardCaches: many(leaderboardCache),
 	userPreferences: many(userPreferences),
+	exerciseLogs: many(exerciseLogs),
 }));
 
 export const achievementsRelations = relations(achievements, ({one}) => ({
@@ -40,6 +41,13 @@ export const leaderboardCacheRelations = relations(leaderboardCache, ({one}) => 
 export const userPreferencesRelations = relations(userPreferences, ({one}) => ({
 	user: one(users, {
 		fields: [userPreferences.userId],
+		references: [users.id]
+	}),
+}));
+
+export const exerciseLogsRelations = relations(exerciseLogs, ({one}) => ({
+	user: one(users, {
+		fields: [exerciseLogs.userId],
 		references: [users.id]
 	}),
 }));

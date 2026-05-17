@@ -118,3 +118,22 @@ export const userPreferences = pgTable("user_preferences", {
 		}),
 	unique("user_preferences_user_id_unique").on(table.userId),
 ]);
+
+export const exerciseLogs = pgTable("exercise_logs", {
+	id: serial().primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	username: varchar({ length: 100 }).notNull(),
+	exerciseName: varchar("exercise_name", { length: 200 }).notNull(),
+	duration: integer("duration").notNull(),
+	caloriesBurned: integer("calories_burned").notNull(),
+	intensity: varchar({ length: 20 }).default('medium'),
+	category: varchar({ length: 50 }),
+	date: varchar({ length: 10 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "exercise_logs_user_id_users_id_fk"
+		}),
+]);
