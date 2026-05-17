@@ -710,7 +710,8 @@ export async function getExerciseLogsByUsername(
     const filtered = mockExerciseLogs.filter(
       (log) => log.username === username && (!dateFilter || log.date === dateFilter)
     )
-    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    const sorted = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return sorted.slice(offset, offset + limit)
   }
 
   try {
