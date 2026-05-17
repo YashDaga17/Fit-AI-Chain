@@ -12,6 +12,7 @@ import {
   Calendar,
   TrendingUp,
   Filter,
+  X,
 } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import ExerciseLogger from '@/components/ExerciseLogger'
@@ -61,6 +62,7 @@ export default function ExercisePage() {
   const [logs, setLogs] = useState<ExerciseLogEntry[]>([])
   const [isLoadingLogs, setIsLoadingLogs] = useState(false)
   const [dateFilter, setDateFilter] = useState<DateFilter>('today')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -70,6 +72,7 @@ export default function ExercisePage() {
     if (!username) return
 
     setIsLoadingLogs(true)
+    setError(null)
     try {
       let url = `/api/exercise?username=${encodeURIComponent(username)}`
       if (dateFilter === 'today') {
@@ -81,21 +84,23 @@ export default function ExercisePage() {
       }
 
       const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        let entries = data.logs || []
-
-        if (dateFilter === 'week') {
-          const weekAgo = new Date()
-          weekAgo.setDate(weekAgo.getDate() - 7)
-          const weekAgoStr = weekAgo.toLocaleDateString('en-CA')
-          entries = entries.filter((log: ExerciseLogEntry) => log.date >= weekAgoStr)
-        }
-
-        setLogs(entries)
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.message || 'Failed to load logs')
       }
-    } catch {
-      // silent fail
+      const data = await response.json()
+      let entries = data.logs || []
+
+      if (dateFilter === 'week') {
+        const weekAgo = new Date()
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        const weekAgoStr = weekAgo.toLocaleDateString('en-CA')
+        entries = entries.filter((log: ExerciseLogEntry) => log.date >= weekAgoStr)
+      }
+
+      setLogs(entries)
+    } catch (err: any) {
+      setError(err.message || 'Failed to load logs')
     } finally {
       setIsLoadingLogs(false)
     }
@@ -134,16 +139,19 @@ export default function ExercisePage() {
     const confirmed = window.confirm(`Delete "${log.exerciseName}" from your log?`)
     if (!confirmed) return
 
+    setError(null)
     try {
       const response = await fetch(
         `/api/exercise?id=${log.id}&username=${encodeURIComponent(username!)}`,
         { method: 'DELETE' }
       )
-      if (response.ok) {
-        setLogs((current) => current.filter((item) => item.id !== log.id))
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.message || 'Failed to delete log')
       }
-    } catch {
-      // silent fail
+      setLogs((current) => current.filter((item) => item.id !== log.id))
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete log')
     }
   }
 
@@ -231,6 +239,15 @@ export default function ExercisePage() {
 
         {/* History section */}
         <section className="space-y-4">
+          {error && (
+            <div className="flex items-center justify-between rounded-2xl bg-red-50 p-4 text-sm text-red-700 shadow-sm border border-red-100">
+              <span className="font-medium">{error}</span>
+              <button type="button" onClick={() => setError(null)} aria-label="Close error" className="hover:bg-red-100 p-1 rounded-md transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Exercise History</h2>
