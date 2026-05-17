@@ -347,6 +347,7 @@ export default function ExercisePage() {
                           size="sm"
                           onClick={() => handleDelete(log)}
                           className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                          aria-label={`Delete ${log.exerciseName}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
