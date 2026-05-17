@@ -10,6 +10,10 @@ const defaultAnalytics: WeeklyAnalytics = {
   weeklyXP: 0,
   daysLogged: 0,
   currentStreak: 0,
+  averageProtein: 0,
+  averageCarbs: 0,
+  averageFat: 0,
+  averageFiber: 0,
   dailyBreakdown: [],
   topMealType: 'No data yet',
 }
