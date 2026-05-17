@@ -58,8 +58,10 @@ export async function POST(req: NextRequest) {
     const exerciseName = sanitizeString(body.exerciseName, 200)
     const duration = clampInteger(body.duration, NaN, 1, 600)
     const caloriesBurned = clampInteger(body.caloriesBurned, NaN, 0, 10000)
-    const intensity = sanitizeString(body.intensity, 20) || 'medium'
-    const category = sanitizeString(body.category, 50)
+    const rawIntensity = sanitizeString(body.intensity, 20)?.toLowerCase() || 'medium'
+    const intensity = ['low', 'medium', 'high'].includes(rawIntensity) ? rawIntensity : 'medium'
+    const rawCategory = sanitizeString(body.category, 50)?.toLowerCase() || ''
+    const category = ['cardio', 'strength', 'flexibility', 'sports'].includes(rawCategory) ? rawCategory : 'other'
     const date = sanitizeString(body.date, 10)
 
     if (!exerciseName || !Number.isFinite(duration) || !Number.isFinite(caloriesBurned) || !date) {
