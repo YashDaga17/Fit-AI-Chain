@@ -3,7 +3,7 @@ import { users, foodEntries, userPreferences, exerciseLogs } from './db/schema'
 import { and, eq, desc, sql } from 'drizzle-orm'
 import type { UserPreferences, WeeklyAnalytics } from '@/types/analytics'
 
-let mockExerciseLogs: any[] = []
+const mockExerciseLogs: any[] = []
 
 function createMockUser(
   username: string,
