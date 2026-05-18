@@ -109,8 +109,8 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
   }
 
   return (
-    <Card className="border-orange-200/50 bg-white/80 p-8 backdrop-blur-sm shadow-xl max-w-md w-full">
-      <div className="flex flex-col items-center gap-6 text-center">
+    <Card className="border-orange-200/50 bg-white/80 p-6 backdrop-blur-sm shadow-xl max-w-md w-full">
+      <div className="flex flex-col items-center gap-5 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-red-100">
           <svg className="h-10 w-10 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -124,25 +124,25 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
 
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Welcome to Fit AI Chain! 🎯</h2>
-          <p className="mt-2 text-gray-600">Connect your wallet to start tracking your fitness journey</p>
+          <p className="mt-1.5 text-sm text-gray-600">Connect your wallet to start tracking your fitness journey</p>
           <p className="mt-1 text-sm text-gray-500">🔒 Secure authentication required for each session</p>
         </div>
 
         {!isMiniKitAvailable ? (
-          <div className="w-full space-y-4">
-            <div className="flex items-start gap-3 rounded-lg bg-orange-50 p-4 text-left border border-orange-200">
+          <div className="w-full space-y-3">
+            <div className="flex items-start gap-3 rounded-xl bg-orange-50 p-4 text-left border border-orange-200">
               <Smartphone className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="font-semibold text-orange-900 mb-1">📱 Open in World App</p>
                 <p className="text-sm text-orange-700">
                   This app needs to run inside World App to access wallet features.
                 </p>
-                <ol className="mt-2 text-sm text-orange-700 space-y-1 list-decimal list-inside">
+                <ol className="mt-1.5 text-sm text-orange-700 space-y-1 list-decimal list-inside">
                   <li>Open World App on your phone</li>
                   <li>Go to Mini Apps</li>
                   <li>Add this app or scan the QR code</li>
                 </ol>
-                <div className="mt-3 p-2 bg-orange-100 rounded text-xs text-orange-800">
+                <div className="mt-2 p-2 bg-orange-100 rounded-lg text-xs text-orange-800">
                   <strong>Debug Info:</strong> MiniKit installed: {(() => {
                     try {
                       try {
@@ -226,7 +226,7 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
         )}
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200 w-full">
+          <div className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700 border border-red-200 w-full">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <p>{error}</p>
           </div>
