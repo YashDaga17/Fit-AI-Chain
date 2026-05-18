@@ -118,3 +118,20 @@ export const userPreferences = pgTable("user_preferences", {
 		}),
 	unique("user_preferences_user_id_unique").on(table.userId),
 ]);
+
+// New table: recipes
+export const recipes = pgTable("recipes", {
+  id: serial().primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  servings: integer("servings").default(1),
+  ingredients: jsonb("ingredients").notNull(), // [{name, amount, unit, calories}]
+  totalCalories: integer("total_calories").notNull(),
+  totalProtein: integer("total_protein"),
+  totalCarbs: integer("total_carbs"),
+  totalFat: integer("total_fat"),
+  imageUrl: text("image_url"),
+  isPublic: boolean("is_public").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
