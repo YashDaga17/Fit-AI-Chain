@@ -12,7 +12,7 @@ export function formatDate(date: Date): string {
 
 // Format date for API calls (YYYY-MM-DD)
 export function formatDateForAPI(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toLocaleDateString('en-CA')
 }
 
 // Get date range for weekly summary

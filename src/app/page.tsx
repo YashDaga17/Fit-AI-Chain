@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trophy, Zap, TrendingUp, Star, Flame, Target, Activity, Award, Camera, Users } from 'lucide-react'
+import { Trophy, Zap, TrendingUp, Star, Flame, Target, Activity, Award, Camera, Users, Dumbbell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,7 @@ import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserStats } from '@/hooks/useUserStats'
 import { useFoodAnalysis } from '@/hooks/useFoodAnalysis'
+import { useDailyGoal } from '@/hooks/useDailyGoal'
 import Navigation from '@/components/Navigation'
 import WalletConnect from "@/components/WalletConnect"
 import { MiniKit } from "@worldcoin/minikit-js"
@@ -36,8 +37,10 @@ export default function Home() {
   const { isAuthenticated, username, isLoading } = useAuth()
   const { userStats, leaderboard, loading } = useUserStats(username)
   const { getFoodEntries } = useFoodAnalysis()
+  const { dailyGoal } = useDailyGoal(username)
   const [todayCalories, setTodayCalories] = useState(0)
   const [weeklyCalories, setWeeklyCalories] = useState(0)
+  const [todayBurned, setTodayBurned] = useState(0)
   const [isWorldApp, setIsWorldApp] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
@@ -119,6 +122,22 @@ export default function Home() {
       
       setTodayCalories(todayCals)
       setWeeklyCalories(weeklyCals)
+
+      // Fetch today's exercise data
+      try {
+        const d = new Date()
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        const exerciseRes = await fetch(`/api/exercise?username=${encodeURIComponent(username)}&date=${today}`)
+        if (exerciseRes.ok) {
+          const exerciseData = await exerciseRes.json()
+          const burned = (exerciseData.logs || []).reduce((sum: number, log: any) => sum + (log.caloriesBurned || 0), 0)
+          setTodayBurned(burned)
+        } else {
+          setTodayBurned(0)
+        }
+      } catch {
+        setTodayBurned(0)
+      }
     } catch (error) {
       // Handle error silently
     }
@@ -348,6 +367,58 @@ export default function Home() {
           </Card>
         </div>
 
+        {/* Exercise & Net Calories Summary */}
+        {todayBurned >= 0 && (
+          <Card className="border-0 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Dumbbell className="w-5 h-5" />
+                  <p className="font-semibold">Today's Nutrition Summary</p>
+                </div>
+              </div>
+
+              {/* Stats Breakdown */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/20 pb-2">
+                  <span className="text-white/80">Base Goal</span>
+                  <span className="font-medium">{dailyGoal} cal</span>
+                </div>
+                
+                <div className="flex items-center justify-between border-b border-white/20 pb-2">
+                  <span className="text-white/80 flex items-center gap-1">
+                    <Flame className="w-4 h-4 text-orange-300" /> Calories Burned
+                  </span>
+                  <span className="font-medium text-emerald-200">+{todayBurned} cal</span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-white/20 pb-2">
+                  <span className="text-white/90 font-semibold">Adjusted Goal</span>
+                  <span className="font-bold">{dailyGoal + todayBurned} cal</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-white/80 flex items-center gap-1">
+                    <Target className="w-4 h-4 text-rose-300" /> Food Eaten
+                  </span>
+                  <span className="font-medium">-{todayCalories} cal</span>
+                </div>
+              </div>
+
+              {/* Net Calories Result */}
+              <div className="mt-5 rounded-2xl bg-white/10 p-4 flex items-center justify-between backdrop-blur-sm">
+                <div>
+                  <p className="text-xs text-white/80 uppercase tracking-wider font-semibold">Net Calories Remaining</p>
+                  <p className="text-xs text-white/60 mt-0.5">Adjusted Goal - Food Eaten</p>
+                </div>
+                <p className="text-2xl font-bold">
+                  {Math.max((dailyGoal + todayBurned) - todayCalories, 0)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Weekly Summary */}
         <Card className="border-0 shadow-lg">
   <CardContent className="p-5"></CardContent>
@@ -412,7 +483,7 @@ export default function Home() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <Button 
             className="h-20 bg-gradient-to-r from-orange-500 to-red-600 text-white"
             onClick={() => router.push('/tracker')}
@@ -420,6 +491,15 @@ export default function Home() {
             <div className="flex flex-col items-center gap-1">
               <Camera className="w-6 h-6" />
               <span className="text-sm">Scan Food</span>
+            </div>
+          </Button>
+          <Button 
+            className="h-20 bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+            onClick={() => router.push('/exercise')}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Dumbbell className="w-6 h-6" />
+              <span className="text-sm">Exercise</span>
             </div>
           </Button>
           <Button 

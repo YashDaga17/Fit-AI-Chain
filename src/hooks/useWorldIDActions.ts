@@ -75,7 +75,7 @@ export function useWorldIDActions(): UseWorldIDActionsReturn {
   }
 
   const verifyDailyFoodLog = async () => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
     return verifyAction('daily-food-log', today)
   }
 

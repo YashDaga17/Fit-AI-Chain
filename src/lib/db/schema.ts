@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, boolean, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, integer, timestamp, jsonb, boolean, varchar, date } from 'drizzle-orm/pg-core'
 
 // Users table - stores World App authenticated users (username only)
 export const users = pgTable('users', {
@@ -112,6 +112,20 @@ export const userPreferences = pgTable('user_preferences', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+// Exercise logs table - stores workout/exercise sessions
+export const exerciseLogs = pgTable('exercise_logs', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  username: varchar('username', { length: 100 }).notNull(),
+  exerciseName: varchar('exercise_name', { length: 200 }).notNull(),
+  duration: integer('duration').notNull(), // in minutes
+  caloriesBurned: integer('calories_burned').notNull(),
+  intensity: varchar('intensity', { length: 20 }).default('medium'), // low, medium, high
+  category: varchar('category', { length: 50 }), // cardio, strength, flexibility, sports
+  date: date('date').notNull(), // YYYY-MM-DD
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // Export types
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -121,3 +135,5 @@ export type LeaderboardEntry = typeof leaderboardCache.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Achievement = typeof achievements.$inferSelect
 export type UserPreference = typeof userPreferences.$inferSelect
+export type ExerciseLog = typeof exerciseLogs.$inferSelect
+export type NewExerciseLog = typeof exerciseLogs.$inferInsert

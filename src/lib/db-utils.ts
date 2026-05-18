@@ -1,7 +1,9 @@
 import { db, isDatabaseConnected } from './db'
-import { users, foodEntries, userPreferences } from './db/schema'
+import { users, foodEntries, userPreferences, exerciseLogs } from './db/schema'
 import { and, eq, desc, sql } from 'drizzle-orm'
 import type { UserPreferences, WeeklyAnalytics } from '@/types/analytics'
+
+const mockExerciseLogs: any[] = []
 
 function createMockUser(
   username: string,
@@ -657,3 +659,114 @@ function parseNutrientValue(value: unknown) {
   const parsed = Number.parseFloat(value.replace(/[^0-9.]/g, ''))
   return Number.isFinite(parsed) ? parsed : 0
 }
+
+/**
+ * Exercise Log Functions
+ */
+
+/**
+ * Create a new exercise log entry
+ */
+export async function createExerciseLog(entry: {
+  userId: number
+  username: string
+  exerciseName: string
+  duration: number
+  caloriesBurned: number
+  intensity?: string
+  category?: string
+  date: string
+}) {
+  if (!isDatabaseConnected || !db) {
+    const mockEntry = {
+      id: Date.now(),
+      ...entry,
+      intensity: entry.intensity || 'medium',
+      category: entry.category || null,
+      createdAt: new Date().toISOString(),
+    }
+    mockExerciseLogs.push(mockEntry)
+    return mockEntry
+  }
+
+  try {
+    const dbEntry = {
+      ...entry,
+      intensity: entry.intensity || 'medium',
+      category: entry.category === undefined ? null : entry.category,
+    }
+    const [newEntry] = await db.insert(exerciseLogs).values(dbEntry).returning()
+    return newEntry
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get exercise logs for a user, optionally filtered by date
+ */
+export async function getExerciseLogsByUsername(
+  username: string,
+  dateFilter?: string,
+  limit: number = 50,
+  offset: number = 0
+) {
+  if (!isDatabaseConnected || !db) {
+    const filtered = mockExerciseLogs.filter(
+      (log) => log.username === username && (!dateFilter || log.date === dateFilter)
+    )
+    const sorted = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return sorted.slice(offset, offset + limit)
+  }
+
+  try {
+    const conditions = [eq(exerciseLogs.username, username)]
+    if (dateFilter) {
+      conditions.push(eq(exerciseLogs.date, dateFilter))
+    }
+
+    const entries = await db
+      .select()
+      .from(exerciseLogs)
+      .where(and(...conditions))
+      .orderBy(desc(exerciseLogs.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    return entries
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get today's exercise logs for a user
+ */
+export async function getTodayExerciseLogs(username: string) {
+  const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
+  return getExerciseLogsByUsername(username, today)
+}
+
+/**
+ * Delete an exercise log by id and username
+ */
+export async function deleteExerciseLogById(id: number, username: string) {
+  if (!isDatabaseConnected || !db) {
+    const index = mockExerciseLogs.findIndex(
+      (log) => log.id === id && log.username === username
+    )
+    if (index !== -1) {
+      mockExerciseLogs.splice(index, 1)
+      return true
+    }
+    return false
+  }
+
+  const [entry] = await db
+    .delete(exerciseLogs)
+    .where(and(eq(exerciseLogs.id, id), eq(exerciseLogs.username, username)))
+    .returning()
+
+  return !!entry
+}
+
