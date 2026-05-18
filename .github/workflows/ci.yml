@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-build:
     name: Lint, Type Check & Build
@@ -21,6 +25,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Cache .next build output
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-
+
       - name: Install dependencies
         run: npm ci
 
@@ -30,17 +43,79 @@ jobs:
       - name: Run Type Check
         run: npm run type-check
 
+      - name: Record build start time
+        id: build_start
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Build project
+        id: build
         run: npm run build
         env:
-          # Add any required environment variables for build
-          SKIP_ENV_VALIDATION: true
+          NEXT_PUBLIC_APP_NAME: "Fit AI Chain"
+          NEXT_PUBLIC_WLD_APP_ID: ${{ secrets.NEXT_PUBLIC_WLD_APP_ID || 'app_placeholder' }}
+          NEXT_PUBLIC_WORLDCOIN_APP_ID: ${{ secrets.NEXT_PUBLIC_WORLDCOIN_APP_ID || 'app_placeholder' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://placeholder:placeholder@placeholder/placeholder' }}
+          SKIP_ENV_VALIDATION: false
 
-      - name: Check build output
+      - name: Verify build output
+        id: verify
         run: |
-          if [ -d ".next" ]; then
-            echo "Build successful - .next directory created"
-          else
+          if [ ! -d ".next" ]; then
+            echo "status=failed" >> $GITHUB_OUTPUT
             echo "Build failed - .next directory not found"
             exit 1
           fi
+
+          page_count=$(find .next/server/app -name "*.html" 2>/dev/null | wc -l | tr -d ' ')
+          chunk_count=$(find .next/static/chunks -name "*.js" 2>/dev/null | wc -l | tr -d ' ')
+          build_size=$(du -sh .next 2>/dev/null | cut -f1)
+
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "page_count=${page_count}" >> $GITHUB_OUTPUT
+          echo "chunk_count=${chunk_count}" >> $GITHUB_OUTPUT
+          echo "build_size=${build_size}" >> $GITHUB_OUTPUT
+          echo "Build verified - .next directory exists"
+
+      - name: Compute build duration
+        id: build_duration
+        if: always()
+        run: |
+          end_time=$(date +%s)
+          start_time=${{ steps.build_start.outputs.time }}
+          duration=$((end_time - start_time))
+          echo "seconds=${duration}" >> $GITHUB_OUTPUT
+
+      - name: Write job summary
+        if: always()
+        run: |
+          STATUS="${{ steps.verify.outputs.status }}"
+          DURATION="${{ steps.build_duration.outputs.seconds }}s"
+          PAGE_COUNT="${{ steps.verify.outputs.page_count }}"
+          CHUNK_COUNT="${{ steps.verify.outputs.chunk_count }}"
+          BUILD_SIZE="${{ steps.verify.outputs.build_size }}"
+
+          if [ "$STATUS" = "success" ]; then
+            STATUS_BADGE="✅ Passed"
+          else
+            STATUS_BADGE="❌ Failed"
+          fi
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## CI Build Report
+
+          | Field            | Value                                  |
+          |------------------|----------------------------------------|
+          | Status           | ${STATUS_BADGE}                        |
+          | Build duration   | ${DURATION}                            |
+          | Branch           | \`${{ github.ref_name }}\`             |
+          | Commit           | \`${{ github.sha }}\`                  |
+          | Triggered by     | ${{ github.actor }}                    |
+          | Event            | ${{ github.event_name }}               |
+
+          ### Build output
+          | Metric           | Value                                  |
+          |------------------|----------------------------------------|
+          | Pages generated  | ${PAGE_COUNT}                          |
+          | JS chunks        | ${CHUNK_COUNT}                         |
+          | Total build size | ${BUILD_SIZE}                          |
+          EOF
