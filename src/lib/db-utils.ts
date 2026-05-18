@@ -1,6 +1,6 @@
 import { db, isDatabaseConnected } from './db'
 import { users, foodEntries, userPreferences } from './db/schema'
-import { and, eq, desc, sql } from 'drizzle-orm'
+import { and, eq, desc, sql, ilike, gte, lte } from 'drizzle-orm'
 import type { UserPreferences, WeeklyAnalytics } from '@/types/analytics'
 
 function createMockUser(
@@ -248,6 +248,69 @@ export async function getFoodEntriesByUsername(
       .offset(offset)
 
     return entries
+  } catch (error) {
+    throw error
+  }
+}
+
+export async function searchFoodEntries(
+  username: string,
+  filters: {
+    searchTerm?: string
+    startDate?: string
+    endDate?: string
+    mealType?: string
+    limit?: number
+    offset?: number
+  }
+) {
+  if (!isDatabaseConnected || !db) {
+    return []
+  }
+
+  try {
+    const conditions = [eq(foodEntries.username, username)]
+
+    // Food name search
+    if (filters.searchTerm) {
+      conditions.push(
+        ilike(foodEntries.foodName, `%${filters.searchTerm}%`)
+      )
+    }
+
+    // Meal type filter
+    if (filters.mealType) {
+      conditions.push(
+        eq(foodEntries.mealType, filters.mealType)
+      )
+    }
+
+    // Date range filters
+    if (filters.startDate) {
+      conditions.push(
+        gte(foodEntries.createdAt, new Date(`${filters.startDate}T00:00:00`))
+      )
+    }
+
+    if (filters.endDate) {
+      const end = new Date(`${filters.endDate}T23:59:59.999`)
+      conditions.push(
+        lte(foodEntries.createdAt, end)
+      )
+    }
+
+    const MAX_LIMIT = 100
+    const clampedLimit = Math.min(Math.max(1, Math.trunc(Number(filters.limit ?? 50)) || 50), MAX_LIMIT)
+    const clampedOffset = Math.max(0, Math.trunc(Number(filters.offset ?? 0)) || 0)
+
+    return await db
+      .select()
+      .from(foodEntries)
+      .where(and(...conditions))
+      .orderBy(desc(foodEntries.createdAt))
+      .limit(clampedLimit)
+      .offset(clampedOffset)
+
   } catch (error) {
     throw error
   }
