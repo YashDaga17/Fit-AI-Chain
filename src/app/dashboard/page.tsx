@@ -15,6 +15,8 @@ import { useUserStats } from '@/hooks/useUserStats'
 import { useWeeklyAnalytics } from '@/hooks/useWeeklyAnalytics'
 import { getDailyTip, getMotivationalMessage, generateInsights } from '@/utils/tipsAndInsights'
 import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
+import MealRecommendationCard from "@/components/MealRecommendationCard"
+import NutritionRecommendationCard from "@/components/NutritionRecommendationCard"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -293,6 +295,12 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </section>
+        {/* New Features Section */}
+        <section className="grid gap-4 lg:grid-cols-2 mt-6">
+          <MealRecommendationCard />
+          <NutritionRecommendationCard />
+        </section>
+
       </main>
 
       <Navigation />
