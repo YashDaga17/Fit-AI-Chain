@@ -16,7 +16,7 @@ export default function MealRecommendationCard() {
   return (
     <div className="max-w-2xl mx-auto mt-10 p-6 rounded-2xl shadow-lg bg-white">
       <h1 className="text-3xl font-bold mb-6 text-center">
-        Nutrition Recommendations
+        Personalised Meal Recommendations
       </h1>
 
       <div className="mb-6">
