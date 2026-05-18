@@ -118,3 +118,56 @@ export const userPreferences = pgTable("user_preferences", {
 		}),
 	unique("user_preferences_user_id_unique").on(table.userId),
 ]);
+
+export const friendships = pgTable("friendships", {
+  id: serial().primaryKey().notNull(),
+  userId: integer("user_id").notNull(),
+  friendId: integer("friend_id").notNull(),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, accepted, blocked
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "friendships_user_id_users_id_fk"
+  }),
+  foreignKey({
+    columns: [table.friendId],
+    foreignColumns: [users.id],
+    name: "friendships_friend_id_users_id_fk"
+  }),
+]);
+
+export const comments = pgTable("comments", {
+  id: serial().primaryKey().notNull(),
+  userId: integer("user_id").notNull(),
+  foodEntryId: integer("food_entry_id").notNull(),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "comments_user_id_users_id_fk"
+  }),
+  foreignKey({
+    columns: [table.foodEntryId],
+    foreignColumns: [foodEntries.id],
+    name: "comments_food_entry_id_food_entries_id_fk"
+  }),
+]);
+
+export const activityFeed = pgTable("activity_feed", {
+  id: serial().primaryKey().notNull(),
+  userId: integer("user_id").notNull(),
+  activityType: varchar("activity_type", { length: 50 }).notNull(), // logged_food, level_up, achievement
+  content: jsonb("content").notNull(),
+  isPublic: boolean("is_public").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "activity_feed_user_id_users_id_fk"
+  }),
+]);

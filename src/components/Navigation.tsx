@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, usePathname } from 'next/navigation'
-import { Home, Trophy, Camera, BarChart3, LogOut } from 'lucide-react'
+import { Home, Trophy, Camera, BarChart3, LogOut, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -28,6 +28,12 @@ export default function Navigation() {
       label: 'Leaderboard', 
       icon: Trophy,
       active: pathname === '/leaderboard'
+    },
+    { 
+      href: '/social', 
+      label: 'Social', 
+      icon: Users,
+      active: pathname === '/social'
     },
   ]
 
