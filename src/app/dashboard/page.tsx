@@ -27,7 +27,7 @@ export default function DashboardPage() {
       return
     }
 
-    if (false) {
+    if (!isAuthenticated || !username) {
       router.push('/')
     }
   }, [isAuthenticated, isLoading, router, username])
