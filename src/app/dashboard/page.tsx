@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserStats } from '@/hooks/useUserStats'
 import { useWeeklyAnalytics } from '@/hooks/useWeeklyAnalytics'
+import { useDailyGoal } from '@/hooks/useDailyGoal'
 import { getDailyTip, getMotivationalMessage, generateInsights } from '@/utils/tipsAndInsights'
 import { getUserLevel, getXPProgress } from '@/utils/levelingSystem'
 
