@@ -3876,7 +3876,7 @@ Source: https://docs.world.org/mini-apps/quick-start/installing
 ## Quick Start
 
 The fastest way to get started is by using our template next-15 repository.
-Run the following command and follow the instructions to create a new mini app. For cleanliness we recommend using `pnpm` as your package manager.
+Run the following command and follow the instructions to create a new mini app. For cleanliness we recommend using `npm` as your package manager.
 
 ```bash
 npx @worldcoin/create-mini-app@latest my-first-mini-app
@@ -3909,7 +3909,7 @@ npx @worldcoin/create-mini-app@latest my-first-mini-app
 
 [MiniKit-JS](https://www.npmjs.com/package/@worldcoin/minikit-js) is the core lib, framework agnostic,
 
-<CodeGroup>`pnpm install @worldcoin/minikit-js `</CodeGroup>
+<CodeGroup>`npm install @worldcoin/minikit-js `</CodeGroup>
 
 Or use a CDN like [jsdelivr](https://www.jsdelivr.com/package/npm/@worldcoin/minikit-js), for inline HTML, make sure to fill in the version.
 
@@ -6323,7 +6323,7 @@ Before we start, make sure you have the following tools installed:
 
 * [Git](https://git-scm.com/) (usually pre-installed on most systems)
 * [Node.js](https://nodejs.org/en/)
-* [pnpm](https://yarnpkg.com/) (or equivalent like npm, yarn or bun)
+* [npm](https://www.npmjs.com/) 
 * [Foundry CLI](https://book.getfoundry.sh/)
 
 ## Clone template
@@ -6339,7 +6339,7 @@ git clone https://github.com/worldcoin/world-id-onchain-template.git && cd world
 Next, install the dependencies for the World ID template app:
 
 ```bash
-pnpm install
+npm install
 ```
 
 ## Build the smart contracts
@@ -6497,10 +6497,10 @@ Set up your environment variables in the `.env` file. You will need to set the f
 Back in the root directory of the World ID template app, you can start the local web server:
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
-The Contract ABI will be automatically re-generated and saved to `src/abi/ContractAbi.json` on each run of `pnpm dev`.
+The Contract ABI will be automatically re-generated and saved to `src/abi/ContractAbi.json` on each run of `npm run dev`.
 
 ## Iterating
 
@@ -9866,14 +9866,6 @@ For react integrations, we support 2 paths:
   ```bash npm
   npm i @worldcoin/idkit
   ```
-
-  ```bash pnpm
-  pnpm i @worldcoin/idkit
-  ```
-
-  ```bash yarn
-  yarn add @worldcoin/idkit
-  ```
 </CodeGroup>
 
 ## IDKitWidget
@@ -9999,14 +9991,6 @@ For full examples check out this [repo](https://github.com/worldcoin/idkit-js/tr
 <CodeGroup>
   ```bash npm
   npm i @worldcoin/idkit-standalone
-  ```
-
-  ```bash pnpm
-  pnpm i @worldcoin/idkit-standalone
-  ```
-
-  ```bash yarn
-  yarn add @worldcoin/idkit-standalone
   ```
 </CodeGroup>
 

@@ -8,8 +8,6 @@ This guide helps you resolve common issues when setting up and running Fit AI Ch
 ```bash
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
-pnpm install
-# OR
 npm install
 ```
 
@@ -50,11 +48,11 @@ GOOGLE_API_KEY=your_api_key
 ### Schema/Migration problems
 ```bash
 # Reset and recreate schema
-pnpm run db:push
+npm run db:push
 
 # If still issues, manual reset:
 node scripts/reset-database.mjs
-pnpm run db:push
+npm run db:push
 ```
 
 ### Connection timeout
@@ -65,7 +63,7 @@ pnpm run db:push
 ## 🌍 World App Integration Issues
 
 ### Local testing with World App
-1. Start dev server: `pnpm run dev`
+1. Start dev server: `npm run dev`
 2. Expose with ngrok: `ngrok http 3000`
 3. Use HTTPS URL in World App
 4. Make sure your app is approved in World Developer Portal
@@ -118,7 +116,7 @@ tail -f .next/trace
 ```
 
 ### Test components individually
-1. Test database connection: `pnpm run db:studio`
+1. Test database connection: `npm run db:studio`
 2. Test API endpoints with curl/Postman
 3. Test MiniKit in isolation
 4. Test auth flow step-by-step
@@ -129,7 +127,7 @@ tail -f .next/trace
 2. **Create new issue**: Include:
    - Operating system and version
    - Node.js version
-   - Package manager (npm/pnpm)
+   - Package manager (npm)
    - Error messages (full stack trace)
    - Steps to reproduce
    - Screenshots if relevant
@@ -137,7 +135,7 @@ tail -f .next/trace
 3. **Common info to include**:
    ```bash
    node --version
-   npm --version  # or pnpm --version
+   npm --version
    cat package.json | grep "next"
    ```
 

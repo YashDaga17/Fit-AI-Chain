@@ -20,7 +20,7 @@ Fit AI Chain is a production-ready calorie tracking application that combines ar
 Before you start, ensure you have:
 
 - **Node.js 18+** - [Download here](https://nodejs.org/)
-- **pnpm** (recommended) or npm - Install with `npm install -g pnpm`
+- **npm** - Comes with Node.js
 - **Git** - [Download here](https://git-scm.com/)
 
 ### Required Accounts & API Keys
@@ -50,10 +50,6 @@ cd Fit-AI-Chain
 ### 2. Install Dependencies
 
 ```bash
-# Using pnpm (recommended)
-pnpm install
-
-# Or using npm
 npm install
 ```
 
@@ -100,18 +96,18 @@ Initialize your database with the required tables:
 
 ```bash
 # Set up database schema
-pnpm run db:push
+npm run db:push
 
 # OR if you want to generate migrations first
-pnpm run db:generate
-pnpm run db:push
+npm run db:generate
+npm run db:push
 ```
 
 ### 5. Start Development Server
 
 ```bash
 # Start the development server
-pnpm run dev
+npm run dev
 
 # Server will be available at http://localhost:3000
 ```
@@ -122,13 +118,13 @@ pnpm run dev
 
 ```bash
 # Push schema changes to database
-pnpm run db:push
+npm run db:push
 
 # Generate migration files
-pnpm run db:generate
+npm run db:generate
 
 # Open Drizzle Studio (visual database browser)
-pnpm run db:studio
+npm run db:studio
 
 # Reset database (⚠️ WARNING: This deletes all data!)
 node scripts/reset-database.mjs
@@ -151,7 +147,7 @@ To test the complete World App integration:
 
 1. **Start your development server**:
    ```bash
-   pnpm run dev
+   npm run dev
    ```
 
 2. **Expose your local server** (choose one option):
@@ -228,17 +224,17 @@ src/
 
 ```bash
 # Development
-pnpm run dev          # Start development server with Turbopack
-pnpm run build        # Build for production
-pnpm run start        # Start production server
-pnpm run lint         # Run ESLint
-pnpm run type-check   # Run TypeScript type checking
+npm run dev          # Start development server with Turbopack
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # Run TypeScript type checking
 
 # Database Management
-pnpm run db:setup     # Initial database setup
-pnpm run db:studio    # Open Drizzle Studio
-pnpm run db:push      # Push schema changes
-pnpm run db:generate  # Generate migrations
+npm run db:setup     # Initial database setup
+npm run db:studio    # Open Drizzle Studio
+npm run db:push      # Push schema changes
+npm run db:generate  # Generate migrations
 ```
 
 ## 🚀 Deployment
