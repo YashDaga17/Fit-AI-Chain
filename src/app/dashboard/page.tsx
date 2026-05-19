@@ -70,6 +70,7 @@ export default function DashboardPage() {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
   const insightCards = useMemo(() => generateInsights({
