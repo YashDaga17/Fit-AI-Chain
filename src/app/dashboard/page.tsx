@@ -42,6 +42,9 @@ export default function DashboardPage() {
   const dailyTip = getDailyTip()
   const motivationalMessage = getMotivationalMessage()
   const exportToCSV = () => {
+    if (!analytics || !analytics.dailyBreakdown?.length) {
+    return
+  }
   const headers = ['Date', 'Calories']
 
   const rows = analytics.dailyBreakdown.map((day) => [
