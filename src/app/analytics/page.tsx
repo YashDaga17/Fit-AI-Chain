@@ -20,7 +20,9 @@ export default function AnalyticsPage() {
   return (
     <div>
       <h1>Analytics Dashboard 📊</h1>
-      <div style={{ width: "100%", maxWidth: "600px", margin: "auto" }}>
+      <div 
+      aria-label="Analytics chart"
+      style={{ width: "100%", maxWidth: "600px", margin: "auto" }}>
       <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data}>
         <XAxis dataKey="date" />
