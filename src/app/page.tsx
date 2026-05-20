@@ -203,10 +203,10 @@ export default function Home() {
   // Show loading while authentication is being checked
   if (isLoading || !isInitialized) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] flex items-center justify-center text-black dark:text-white transition-colors duration-300">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing...</p>
+          <p className="text-gray-600 dark:text-zinc-400">Initializing...</p>
         </div>
       </div>
     )
@@ -215,7 +215,7 @@ export default function Home() {
   // Show authentication in progress screen
   if (isAuthenticating) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] flex items-center justify-center p-4 text-black dark:text-white transition-colors duration-300">
         <div className="text-center max-w-md">
           <div className="mb-6">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-600 mx-auto mb-4"></div>
@@ -225,8 +225,8 @@ export default function Home() {
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">🎉 Authentication Successful!</h2>
-          <p className="text-gray-600 mb-2">Setting up your dashboard...</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">🎉 Authentication Successful!</h2>
+          <p className="text-gray-600 dark:text-zinc-400 mb-2">Setting up your dashboard...</p>
           <p className="text-sm text-orange-600">✅ Wallet connected and verified</p>
           <p className="text-sm text-orange-600">🔄 Loading your fitness data</p>
         </div>
@@ -237,7 +237,7 @@ export default function Home() {
   // Show authentication screen if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] flex items-center justify-center p-4 text-black dark:text-white transition-colors duration-300">
         {!isWorldApp && (
           <div className="absolute top-4 left-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg text-sm z-10">
             <p className="font-semibold">⚠️ Development Mode</p>
@@ -262,19 +262,19 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] flex items-center justify-center text-black dark:text-white transition-colors duration-300">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <p className="text-gray-600 dark:text-zinc-400">Loading your dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-20">
+    <div className="min-h-screen bg-[#fdf7f2] dark:bg-[#0b0f14] pb-20 text-black dark:text-white transition-colors duration-300">
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-b-3xl shadow-lg">
+      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-b-3xl shadow-lg dark:from-orange-500/90 dark:via-orange-600/90 dark:to-red-600/90 dark:shadow-orange-500/20 border-b border-black/5 dark:border-white/10 dark:backdrop-blur-xl">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Welcome back! 👋</h1>
@@ -300,74 +300,74 @@ export default function Home() {
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Today's Calories */}
-          <Card className="bg-gradient-to-br from-orange-100 to-orange-50 border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-[#161b22]/80 border-0 shadow-lg">
   <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <Flame className="w-8 h-8 text-orange-600" />
                 <Badge variant="secondary" className="bg-orange-200 text-orange-800">Today</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{todayCalories}</p>
-              <p className="text-sm text-gray-600">Calories</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{todayCalories}</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">Calories</p>
             </CardContent>
           </Card>
 
           {/* Total XP */}
-          <Card className="bg-gradient-to-br from-purple-100 to-purple-50 border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-[#161b22]/80 border-0 shadow-lg">
   <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <Zap className="w-8 h-8 text-purple-600" />
                 <Badge variant="secondary" className="bg-purple-200 text-purple-800">Total</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{(userStats?.totalXP || 0).toLocaleString()}</p>
-              <p className="text-sm text-gray-600">XP Earned</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{(userStats?.totalXP || 0).toLocaleString()}</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">XP Earned</p>
             </CardContent>
           </Card>
 
           {/* Streak */}
-          <Card className="bg-gradient-to-br from-red-100 to-red-50 border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-[#161b22]/80 border-0 shadow-lg">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <Target className="w-8 h-8 text-red-600" />
                 <Badge variant="secondary" className="bg-red-200 text-red-800">Streak</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{userStats?.streak || 1}</p>
-              <p className="text-sm text-gray-600">Days</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{userStats?.streak || 1}</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">Days</p>
             </CardContent>
           </Card>
 
           {/* Leaderboard Rank */}
-          <Card className="bg-gradient-to-br from-yellow-100 to-yellow-50 border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-[#161b22]/80 border-0 shadow-lg">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <Trophy className="w-8 h-8 text-yellow-600" />
                 <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">Rank</Badge>
               </div>
-              <p className="text-3xl font-bold text-gray-900">#{userStats?.rank || '---'}</p>
-              <p className="text-sm text-gray-600">Global</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">#{userStats?.rank || '---'}</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">Global</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Weekly Summary */}
         <Card className="border-0 shadow-lg">
-  <CardContent className="p-5"></CardContent>
+          <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="w-5 h-5 text-orange-600" />
               Weekly Summary
             </CardTitle>
-          
+          </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Total Calories</span>
+                <span className="text-gray-600 dark:text-zinc-400">Total Calories</span>
                 <span className="font-bold text-lg">{weeklyCalories.toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Average/Day</span>
+                <span className="text-gray-600 dark:text-zinc-400">Average/Day</span>
                 <span className="font-bold text-lg">{Math.round(weeklyCalories / 7).toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Current Level</span>
+                <span className="text-gray-600 dark:text-zinc-400">Current Level</span>
                 <Badge className="bg-gradient-to-r from-orange-500 to-red-600">
                   Lv. {levelInfo.level}
                 </Badge>
@@ -387,15 +387,15 @@ export default function Home() {
           <CardContent>
             <div className="space-y-3">
               {leaderboard.slice(0, 3).map((user, index) => (
-                <div key={user.username} className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
+                <div key={user.username} className="flex items-center gap-3 p-3 bg-white/80 dark:bg-[#111827]/90 rounded-xl">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
                     index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-gray-300' : 'bg-amber-600'
                   }`}>
                     <span className="text-white font-bold">{index + 1}</span>
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{user.username}</p>
-                    <p className="text-sm text-gray-600">Lv. {user.level} • {user.totalXP.toLocaleString()} XP</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{user.username}</p>
+                    <p className="text-sm text-gray-600 dark:text-zinc-400">Lv. {user.level} • {user.totalXP.toLocaleString()} XP</p>
                   </div>
                   {index === 0 && <Trophy className="w-5 h-5 text-yellow-600" />}
                 </div>

@@ -4,17 +4,21 @@ import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/react";
 import Script from "next/script";
 import { Suspense } from "react";
+
+import { ThemeProvider } from "@/components/theme-provider";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Fit AI Chain - AI-Powered Calorie Tracker",
-  description: "Track calories with AI • Earn XP • Compete with friends • World ID verified community",
+  description:
+    "Track calories with AI • Earn XP • Compete with friends • World ID verified community",
   keywords: ["calorie tracker", "AI", "health", "fitness", "world id", "nutrition", "mobile app"],
   authors: [{ name: "Fit AI Chain Team" }],
   creator: "Fit AI Chain",
   publisher: "Fit AI Chain",
   manifest: "/manifest.json",
-  metadataBase: new URL('https://fit-ai-chain.vercel.app'),
+  metadataBase: new URL("https://fit-ai-chain.vercel.app"),
   openGraph: {
     title: "Fit AI Chain - AI-Powered Calorie Tracker",
     description: "Track calories with AI • Earn XP • Compete with friends",
@@ -56,30 +60,38 @@ export const metadata: Metadata = {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
-    "theme-color": "#f97316",
-    "msapplication-TileColor": "#f97316",
-    "msapplication-navbutton-color": "#f97316",
+    "theme-color": "#ff6b00",
+    "msapplication-TileColor": "#ff6b00",
+    "msapplication-navbutton-color": "#ff6b00",
     "application-name": "Fit AI Chain",
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <Script
           src="https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@0.0.77/dist/minikit.js"
           strategy="beforeInteractive"
         />
       </head>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
-        <Analytics />
+
+      <body
+        className={`${GeistSans.variable} ${GeistMono.variable} font-sans`}
+      >
+        <ThemeProvider>
+          <Suspense fallback={null}>
+            {children}
+          </Suspense>
+
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
